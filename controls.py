@@ -25,16 +25,17 @@ KBD_MAP = {
 
 # UI Controls proxy
 class Controls:
-    def __init__(self, clock):
+    def __init__(self):
         self.is_running = True  # False, if application should shutdown
 
-        self._clock = clock
+        self._clock = pygame.time.Clock()
         self._timer1 = 0  # Timer 1 since key is pressed
         self._timer2 = None  # Timer 2 since key was processed last time
 
         self._pressed_key = None  # Pressed key
         self._is_pressed = False  # Key is pressed / hold
         self._is_reported = False  # Key press reported once already
+        self.events = None
 
     def init_all_js(self):
         pygame.joystick.init()
@@ -96,7 +97,8 @@ class Controls:
         return self._report_value()
 
     def update_controls(self):
-        for e in pygame.event.get():
+        self.events = pygame.event.get()
+        for e in self.events:
             match e.type:
                 case pygame.QUIT:
                     self.is_running = False
