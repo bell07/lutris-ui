@@ -7,12 +7,11 @@ if __name__ == '__main__':
     ui = Ui()
     ctr = Controls()
 
-    while ctr.is_running:
+    while True:
         ctr.update_controls()
-        if ctr.is_running is False:
+        if ui.process_controls(ctr) is False:
             break
-
-        ui.process_controls(ctr)
-        ui.draw()
+        ui.draw_ui()
+        ctr.game_tick()
 
     pygame.quit()

@@ -22,7 +22,8 @@ class LutrisDb:
                 "coverart": self.get_cover_art(game)
             })
 
-    def get_cover_art(self, game):
+    @staticmethod
+    def get_cover_art(game):
         image_path = os.path.join(settings.COVERART_PATH, f"{game['slug']}.jpg")
         if os.path.exists(image_path):
             return image_path
