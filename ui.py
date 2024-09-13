@@ -1,12 +1,12 @@
 import pygame
 
 from lutrisdb import LutrisDb
-from uiwidgets import UiWidgetsContainer, UiWidgetsViewport, UiWidgetStatic
+from uiwidgets import UiWidget, UiWidgetsViewport, UiWidgetStatic
 
 GAME_MAX_WIDTH = 200  # Todo: Setting
 GAME_MAX_HEIGHT = GAME_MAX_WIDTH * 1.4
-GAME_BORDER_WIDTH = 20  # ToDo: Setting
-GAME_BORDER_HEIGHT = 20  # ToDo: Setting
+GAME_BORDER_WIDTH = 10  # ToDo: Setting
+GAME_BORDER_HEIGHT = 10  # ToDo: Setting
 
 
 class UiGameWidget(UiWidgetStatic):
@@ -41,16 +41,23 @@ class UiGameWidget(UiWidgetStatic):
             y += line_height  # Start on new row.
 
     def compose(self, surface):
+        max_w = GAME_MAX_WIDTH - GAME_BORDER_WIDTH
+        max_h = GAME_MAX_HEIGHT - GAME_BORDER_HEIGHT
+
+        if self.is_focus is True:
+            surface.fill((128, 128, 255))
+        else:
+            surface.fill((255, 255, 255))
+
         if self._coverart is None:
-            surface.fill((128, 255, 255))
+            pygame.draw.rect(surface, (128, 255, 255), (
+                GAME_BORDER_WIDTH / 2, GAME_BORDER_HEIGHT / 2, max_w - GAME_BORDER_WIDTH / 2,
+                max_h - GAME_BORDER_HEIGHT / 2))
 
         else:
             img = pygame.image.load(self._coverart)
             orig_h = img.get_height()
             orig_w = img.get_width()
-
-            max_w = GAME_MAX_WIDTH
-            max_h = GAME_MAX_HEIGHT
 
             # Print Image
             if orig_h > orig_w * 1.4:
@@ -59,12 +66,13 @@ class UiGameWidget(UiWidgetStatic):
                 zoom_factor = max_w / orig_w
 
             resized = pygame.transform.scale_by(img, zoom_factor)
-            img_pos_x = (max_w - resized.get_width()) / 2
-            img_pos_y = (max_h - resized.get_height()) / 2
+            img_pos_x = (max_w - resized.get_width()) / 2 + GAME_BORDER_WIDTH / 2
+            img_pos_y = (max_h - resized.get_height()) / 2 + GAME_BORDER_HEIGHT / 2
             surface.blit(resized, (img_pos_x, img_pos_y))
 
         # Print Name
-        self.blit_text(surface, self.name, (GAME_BORDER_WIDTH / 2, GAME_BORDER_HEIGHT / 2),
+        self.blit_text(surface.subsurface((GAME_BORDER_WIDTH / 2, GAME_BORDER_HEIGHT / 2, max_w - GAME_BORDER_WIDTH / 2,
+                                           max_h - GAME_BORDER_HEIGHT / 2)), self.name, (0, 0),
                        pygame.font.SysFont(None, 30))
 
 
@@ -73,6 +81,7 @@ class UiGameListWidget(UiWidgetsViewport):
         super().__init__(parent, x, y, w, h)
         self._ldb = LutrisDb()
         self.max_games_cols = 0
+        self.game_widgets = []
         self.update_games_list()
         self.set_vertical_scrollbar()
 
@@ -82,8 +91,8 @@ class UiGameListWidget(UiWidgetsViewport):
     def get_game_position(self, index):
         col = (index - 1) % self.max_games_cols
         row = int((index - 1) / self.max_games_cols)
-        pos_x = col * (GAME_MAX_WIDTH + GAME_BORDER_WIDTH) + GAME_BORDER_WIDTH / 2
-        pos_y = row * (GAME_MAX_HEIGHT + GAME_BORDER_HEIGHT) + GAME_BORDER_HEIGHT / 2
+        pos_x = col * (GAME_MAX_WIDTH + GAME_BORDER_WIDTH)
+        pos_y = row * (GAME_MAX_HEIGHT + GAME_BORDER_HEIGHT)
         return pos_x, pos_y
 
     def update_games_list(self, force=False):
@@ -106,27 +115,91 @@ class UiGameListWidget(UiWidgetsViewport):
 
             self.set_viewport_size(viewport_width, viewport_height)
 
-            index = 0
-            self.widgets = []
-            for game_data in games_data:
-                index = index + 1
-                pos_x, pos_y = self.get_game_position(index)
-
-                self.add_widget(UiGameWidget(self, pos_x, pos_y, GAME_MAX_WIDTH, GAME_MAX_HEIGHT, game_data))
-
+            if len(self.game_widgets) == 0:
+                for idx, game_data in enumerate(games_data):
+                    pos_x, pos_y = self.get_game_position(idx + 1)
+                    self.game_widgets.append(
+                        UiGameWidget(self, pos_x, pos_y, GAME_MAX_WIDTH, GAME_MAX_HEIGHT, game_data))
+            else:
+                for idx, widget in enumerate(self.game_widgets):
+                    pos_x, pos_y = self.get_game_position(idx + 1)
+                    widget.def_x = pos_x
+                    widget.def_y = pos_y
+                    widget.set_changed()
             self.set_changed()
 
-    def draw(self, force=False, parent_updated=False):
-        if force is True or self.is_changed is True or parent_updated is True:
+    def select_game(self, game_name_or_direction):
+        selected_game_index = None
+        for idx, widget in enumerate(self.game_widgets):
+            if widget.is_focus is True:
+                selected_game_index = idx
+
+        if selected_game_index is None:
+            selected_game_index = 0
+        else:
+            widget = self.game_widgets[selected_game_index]
+            widget.is_focus = False
+            widget.draw(force=True)
+            widget.set_changed()
+
+        match game_name_or_direction:
+            case "UP":
+                selected_game_index = selected_game_index - self.max_games_cols
+            case "DOWN":
+                selected_game_index = selected_game_index + self.max_games_cols
+            case "LEFT":
+                selected_game_index = selected_game_index - 1
+            case "RIGHT":
+                selected_game_index = selected_game_index + 1
+            case _:
+                for idx, widget in enumerate(self.game_widgets):
+                    if widget.name == game_name_or_direction:
+                        selected_game_index = idx
+
+        if selected_game_index < 0:
+            selected_game_index = 0
+        if len(self.game_widgets) <= selected_game_index:
+            selected_game_index = len(self.game_widgets) - 1
+
+        widget = self.game_widgets[selected_game_index]
+        widget.is_focus = True
+        widget.draw(force=True)
+        widget.set_changed()
+
+        _, _, _, viewport_h = self.get_widget_dimensions(self.get_parent_surface())
+        _, widget_y, _, widget_h = widget.get_widget_dimensions(self.get_surface())
+        if widget_y < self.shift_y:
+            self.shift_y = widget_y
+
+        if widget_y + widget_h > self.shift_y + viewport_h:
+            self.shift_y = widget_y + widget_h - viewport_h
+
+        self.set_changed()
+
+    def process_events(self, events):
+        for e in events:
+            match e.type:
+                case pygame.KEYDOWN:
+                    match e.key:
+                        case pygame.K_UP:
+                            self.select_game("UP")
+                        case pygame.K_DOWN:
+                            self.select_game("DOWN")
+                        case pygame.K_LEFT:
+                            self.select_game("LEFT")
+                        case pygame.K_RIGHT:
+                            self.select_game("RIGHT")
+
+    def draw(self, force=False):
+        if force is True or self.is_changed():
             self.update_games_list(force)
-        super().draw(force, parent_updated)
+        super().draw(force)
 
 
-class UiScreen(UiWidgetsContainer):
+class UiScreen(UiWidget):
     def __init__(self, parent, x, y, w, h):
         super().__init__(parent, x, y, w, h)
         self.games_viewport = UiGameListWidget(self, 5, 5, -5, -5)
-        self.add_widget(self.games_viewport)
 
     def process_events(self, events):
         for e in events:
@@ -137,15 +210,13 @@ class UiScreen(UiWidgetsContainer):
                     self.draw(force=True)
                 case pygame.QUIT:
                     return False
+        super().process_events(events)
 
     def compose(self, surface):
         surface.fill((255, 255, 255))
 
-    def draw(self, force=False, parent_updated=False):
-        if self.is_changed is False and force is False:
-            return
-        self.compose(self.get_surface())
-        super().draw(force, parent_updated=True)
+    def draw(self, force=False):
+        super().draw(force)
         pygame.display.flip()
 
 

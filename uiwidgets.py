@@ -7,18 +7,25 @@ SCROLLBAR_BORDER = 2
 class UiWidget:
     def __init__(self, parent, def_x, def_y, def_w, def_h):
         self.parent_widget = None
-        self._detached_surface = None
-        self.set_parent_surface(parent)
-        self.is_changed = True
-        self.is_visible = True
         self.def_x = def_x
         self.def_y = def_y
         self.def_w = def_w
         self.def_h = def_h
 
+        self._is_changed = True
+        self.is_visible = True
+        self.is_interactive = False
+        self.is_focus = False
+
+        self.widgets = []
+
+        self._detached_surface = None
+        self.set_parent_surface(parent)
+
     def set_parent_surface(self, parent):
         if hasattr(parent, "widgets"):  # Check if UiWidget compatible object
             self.parent_widget = parent
+            parent.add_child(self)
             self._detached_surface = None
         else:
             self._detached_surface = parent
@@ -82,22 +89,43 @@ class UiWidget:
     def compose(self, surface):
         pass
 
-    def draw(self, force=False, parent_updated=False):
+    def compose_to_parent(self, surface):
+        pass
+
+    def is_changed(self):
+        return self._is_changed is True
+
+    def is_parent_changed(self):
+        return (self.parent_widget and self.parent_widget.is_changed() is True) or False
+
+    def set_changed(self, changed=True):
+        self._is_changed = changed  # if self.parent_widget is not None:  #    self.parent_widget.set_changed()
+
+    def draw(self, force=False):
         if self.is_visible is False:
             return
-        # Rebuild, if changed or forced, or parent updated
-        if self.is_changed is True or parent_updated is True or force is True:
-            # Compose directly in sub-surface
-            self.compose(self.get_surface())
-            self.is_changed = False
 
-    def set_changed(self):
-        self.is_changed = True
-        if self.parent_widget is not None:
-            self.parent_widget.set_changed()
+        if force is True or self.is_changed() is True or self.is_parent_changed() is True:
+            self.compose_to_parent(self.get_parent_surface())
+            self.set_changed()
+        if force is True or self.is_changed() is True:
+            self.compose(self.get_surface())
+
+        for widget in self.widgets:
+            widget.draw(force)
+        self.set_changed(False)
+
+    def add_child(self, widget) -> None:
+        widget.parent_widget = self
+        self.widgets.append(widget)
+
+    def remove_child(self, widget) -> None:
+        self.widgets.remove(widget)
 
     def process_events(self, events):
-        pass
+        for widget in self.widgets:
+            # TODO: Check Focus
+            widget.process_events(events)
 
 
 class UiWidgetStatic(UiWidget):
@@ -109,46 +137,36 @@ class UiWidgetStatic(UiWidget):
         parent_surface = self.get_parent_surface()
         self._widget_surface = pygame.Surface.copy(
             parent_surface.subsurface((self.get_widget_dimensions(parent_surface))))
+        self.compose(self._widget_surface)
         return self._widget_surface
 
     def get_surface(self):
         if self._widget_surface is None:
-            self.compose(self.init_widget_surface())
+            return self.init_widget_surface()
         return self._widget_surface
 
-    def draw(self, force=False, parent_updated=False):
-        if force is True:  # Force composing
-            self.compose(self.init_widget_surface())
+    def is_changed(self):
+        # Parent changes not relevant
+        return self._is_changed is True
+
+    def draw(self, force=False):
+        if self.is_visible is False:
+            return
+        if force is True or self._widget_surface is None:  # Force composing
+            self.init_widget_surface()
+            self.set_changed()
 
         # Rebuild, if changed or forced
-        if self.is_changed is True or parent_updated is True or force is True:
+        if force is True or self.is_parent_changed():
             parent_surface = self.get_parent_surface()
             widget_surface = self.get_surface()
             parent_surface.blit(widget_surface, self.get_widget_dimensions(parent_surface))
-            self.is_changed = False
+            self.compose_to_parent(parent_surface)
+            self.set_changed()
 
-
-class UiWidgetsContainer(UiWidget):
-    def __init__(self, parent, x, y, w, h):
-        super().__init__(parent, x, y, w, h)
-        self.widgets = []
-
-    def add_widget(self, widget: UiWidget) -> None:
-        widget.parent_widget = self
-        self.widgets.append(widget)
-
-    def remove_widget(self, widget: UiWidget) -> None:
-        self.widgets.remove(widget)
-
-    def draw(self, force=False, parent_updated=False):
         for widget in self.widgets:
-            widget.draw(force, parent_updated)
-        self.is_changed = False
-
-    def process_events(self, events):
-        for widget in self.widgets:
-            # TODO: Check Focus
-            widget.process_events(events)
+            widget.draw(force)
+        self.set_changed(False)
 
 
 class UiWidgetsScrollbar(UiWidget):
@@ -171,34 +189,38 @@ class UiWidgetsScrollbar(UiWidget):
         self.min_value = 0
         self.max_value = 0
 
-    def compose(self, surface):
-        surface.fill((128, 128, 128))
+    def get_parent_surface(self):
+        return self.parent_widget.get_visible_surface()
+
+    def compose_to_parent(self, surface):
+        if self.min_value >= self.max_value:
+            return
+
         if self.is_horizontal is True:
-            max_value = surface.get_width()
+            max_value = surface.get_width() - SCROLLBAR_BORDER * 2
+            max_height = surface.get_height()
             min_value = self.min_value * max_value / self.max_value
             cur_value = self.current_value * max_value / self.max_value
-            pygame.draw.rect(surface, pygame.colordict.THECOLORS["red"],
-                             (cur_value, SCROLLBAR_BORDER, min_value, SCROLLBAR_WIDTH - 2 * SCROLLBAR_BORDER),
-                             border_radius=int(SCROLLBAR_WIDTH / 2))
+            pygame.draw.rect(surface, pygame.colordict.THECOLORS["red"], (
+                cur_value + SCROLLBAR_BORDER, max_height - SCROLLBAR_WIDTH - SCROLLBAR_BORDER, min_value,
+                SCROLLBAR_WIDTH - 2 * SCROLLBAR_BORDER), border_radius=int(SCROLLBAR_WIDTH / 2))
         else:
-            max_value = surface.get_height()
+            max_value = surface.get_height() - SCROLLBAR_BORDER * 2
+            max_width = surface.get_width()
             min_value = self.min_value * max_value / self.max_value
             cur_value = self.current_value * max_value / self.max_value
-            pygame.draw.rect(surface, pygame.colordict.THECOLORS["red"],
-                             (SCROLLBAR_BORDER, cur_value, SCROLLBAR_WIDTH - 2 * SCROLLBAR_BORDER, min_value),
-                             border_radius=int(SCROLLBAR_WIDTH / 2))
-
-    def draw(self, force=False, parent_updated=False):
-        if self.auto_hide is True and self.current_value == 0 and self.min_value >= self.max_value:
-            return  # Auto-Hidden
-        super().draw(force, parent_updated)
+            pygame.draw.rect(surface, pygame.colordict.THECOLORS["red"], (
+                max_width - SCROLLBAR_WIDTH - SCROLLBAR_BORDER, cur_value + SCROLLBAR_BORDER,
+                SCROLLBAR_WIDTH - 2 * SCROLLBAR_BORDER, min_value), border_radius=int(SCROLLBAR_WIDTH / 2))
 
 
-class UiWidgetsViewport(UiWidgetsContainer, UiWidgetStatic):
+class UiWidgetsViewport(UiWidgetStatic):
     def __init__(self, parent, x, y, w, h):
         super().__init__(parent, x, y, w, h)
         self.shift_x = 0
         self.shift_y = 0
+        self._old_shift_x = None
+        self._old_shift_y = None
         self.viewport_width = None
         self.viewport_height = None
         self.vertical_scrollbar_widget = None
@@ -206,7 +228,6 @@ class UiWidgetsViewport(UiWidgetsContainer, UiWidgetStatic):
     def set_viewport_size(self, w, h):
         self.viewport_width = w
         self.viewport_height = h
-        self.init_widget_surface()
 
     def init_widget_surface(self):
         if self.viewport_width is None or self.viewport_height is None:
@@ -216,7 +237,7 @@ class UiWidgetsViewport(UiWidgetsContainer, UiWidgetStatic):
             if self.viewport_height is None:
                 self.viewport_height = h
         self._widget_surface = pygame.surface.Surface((self.viewport_width, self.viewport_height))
-        self.set_changed()
+        self.compose(self._widget_surface)
         return self._widget_surface
 
     def set_vertical_scrollbar(self, scrollbar_widget=None):
@@ -226,11 +247,17 @@ class UiWidgetsViewport(UiWidgetsContainer, UiWidgetStatic):
         else:
             self.vertical_scrollbar_widget = scrollbar_widget
 
-    def draw(self, force=False, parent_updated=False):
-        # TODO: Check if draw is necessary
-        self.compose(self.get_surface())  # Draw background
-        super().draw(force, parent_updated=True)
+    def get_visible_surface(self):
         viewport_surface = self.get_surface()
+        parent_surface = self.get_parent_surface()
+        x, y, w, h = self.get_widget_dimensions(parent_surface)
+        return viewport_surface.subsurface((self.shift_x, self.shift_y, w, h))
+
+    def draw(self, force=False):
+        if self.is_visible is False:
+            return
+
+        # Adjust shift
         parent_surface = self.get_parent_surface()
         x, y, w, h = self.get_widget_dimensions(parent_surface)
         if self.viewport_width < self.shift_x + w:
@@ -239,12 +266,22 @@ class UiWidgetsViewport(UiWidgetsContainer, UiWidgetStatic):
         if self.viewport_height < self.shift_y + h:
             self.shift_y = self.viewport_height - h
 
-        visible_area = viewport_surface.subsurface((self.shift_x, self.shift_y, w, h))
+        if self.shift_x != self._old_shift_x or self.shift_y != self._old_shift_y:
+            self.set_changed()
+            self._old_shift_x = self.shift_x
+            self._old_shift_y = self.shift_y
+
+        if force is True or self.is_changed() is True:
+            self.init_widget_surface()
+
+        # Adjust scrollbar
+        visible_surface = self.get_visible_surface()
         if self.vertical_scrollbar_widget is not None:
             self.vertical_scrollbar_widget.min_value = h
-            self.vertical_scrollbar_widget.max_value = viewport_surface.get_height()
+            self.vertical_scrollbar_widget.max_value = self.viewport_height
             self.vertical_scrollbar_widget.current_value = self.shift_y
-            self.vertical_scrollbar_widget.set_parent_surface(visible_area)
-            self.vertical_scrollbar_widget.draw(force, parent_updated)
 
-        parent_surface.blit(visible_area, (x, y))
+        # Draw viewport content
+        super().draw(force)
+        parent_surface.blit(visible_surface, (x, y))
+        self.set_changed(False)
