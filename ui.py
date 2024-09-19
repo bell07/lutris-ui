@@ -1,5 +1,8 @@
+import sys
+
 import pygame
 
+import controls
 from lutrisdb import LutrisDb
 from uiwidgets import UiWidget, UiWidgetsViewport, UiWidgetStatic
 
@@ -75,38 +78,24 @@ class UiGameWidget(UiWidgetStatic):
                        pygame.font.SysFont(None, 30))
 
     def launch(self):
-        self.parent_widget.ldb.launch(self.data)
-
-    def set_focus(self, focus=True):
-        if focus is True:
-            for widget in self.parent_widget.widgets:
-                if widget != self:
-                    widget.set_focus(False)
-        super().set_focus(focus)
+        self.parent_widget.ldb.launch(self)
 
     def process_events(self, events):
         for e in events:
             match e.type:
-                case pygame.KEYDOWN:
-                    if e.key == pygame.K_RETURN:
-                        # self.set_focus() focus managed by keys
-                        self.launch()
-                        break
-
                 case pygame.MOUSEBUTTONUP:
-                    self.set_focus()
-                    if e.button == 1:
+                    if e.button == pygame.BUTTON_LEFT:
                         self.launch()
                         break
 
 
 class UiGameListWidget(UiWidgetsViewport):
-    def __init__(self, parent, x, y, w, h):
+    def __init__(self, parent, ldb, x, y, w, h):
         super().__init__(parent, x, y, w, h)
-        self.ldb = LutrisDb()
+        self.ldb = ldb
         self.max_games_cols = 0
         self.game_widgets = []
-        self.set_vertical_scrollbar()
+        self.set_focus()  # Initial focus for keys processing
 
     def compose(self, surface):
         surface.fill((200, 200, 200))
@@ -150,17 +139,19 @@ class UiGameListWidget(UiWidgetsViewport):
                     widget.def_y = pos_y
                     widget.set_changed()
 
-    def select_game(self, game_name_or_direction):
+    def select_game(self, command):
+        if command == "ENTER" and isinstance(self.selected_widget, UiGameWidget):
+            self.selected_widget.launch()
+            return
+
         selected_game_index = 0
         if self.selected_widget is not None:
             for idx, game in enumerate(self.game_widgets):
                 if game == self.selected_widget:
                     selected_game_index = idx
                     break
-            self.selected_widget.is_focus = False
-            self.selected_widget.set_changed()
 
-        match game_name_or_direction:
+        match command:
             case "UP":
                 selected_game_index = selected_game_index - self.max_games_cols
             case "DOWN":
@@ -171,7 +162,7 @@ class UiGameListWidget(UiWidgetsViewport):
                 selected_game_index = selected_game_index + 1
             case _:
                 for idx, widget in enumerate(self.game_widgets):
-                    if widget.name == game_name_or_direction:
+                    if widget.name == command:
                         selected_game_index = idx
                         break
 
@@ -195,45 +186,55 @@ class UiGameListWidget(UiWidgetsViewport):
     def process_events(self, events):
         for e in events:
             match e.type:
-                case pygame.KEYDOWN:
-                    match e.key:
-                        case pygame.K_UP:
-                            self.select_game("UP")
-                        case pygame.K_DOWN:
-                            self.select_game("DOWN")
-                        case pygame.K_LEFT:
-                            self.select_game("LEFT")
-                        case pygame.K_RIGHT:
-                            self.select_game("RIGHT")
+                case controls.COMMAND_EVENT:
+                    self.select_game(e.command)
                 case pygame.MOUSEWHEEL:
                     self.shift_y = self.shift_y - (e.y * GAME_MAX_HEIGHT / 4)
-                    if self.shift_y < 0:
-                        self.shift_y = 0
                     self.set_changed()
         super().process_events(events)
 
-    def draw(self, force=False):
+    def draw(self, force=False, draw_to_parent=True):
         if force is True:
             self.set_changed()
         if self.is_changed():
             self.update_games_list(force)
-        return super().draw(force)
+        return super().draw(force, draw_to_parent)
+
+
+class UiGameIsRunningWidget(UiWidget):
+    def __init__(self, parent, ldb):
+        self.ldb = ldb
+        super().__init__(parent, 0, 0, 0, 0)  # Will be resized
+        self.is_visible = False
+        self.game = None
+
+    def process_events(self, events):
+        if self.game is None:
+            return
+
+        if self.ldb.check_is_running() is False:
+            self.parent_widget.games_viewport.is_interactive = True
+            self.parent_widget.games_viewport.set_focus()
+            self.is_visible = False
+            self.game = None
 
 
 class UiScreen(UiWidget):
     def __init__(self, parent, x, y, w, h):
         super().__init__(parent, x, y, w, h)
-        self.games_viewport = UiGameListWidget(self, 5, 5, -5, -5)
+        ldb = LutrisDb(self)
+        self.games_viewport = UiGameListWidget(self, ldb, 5, 5, -5, -5)
+        self.game_is_running = UiGameIsRunningWidget(self, ldb)
 
     def process_events(self, events):
         for e in events:
-            match e.type:
-                case pygame.VIDEORESIZE:
-                    self.games_viewport.viewport_width = None  # Auto adjust to maximum
-                    self.draw(force=True)
-                    return
-                case pygame.QUIT:
-                    return False
+            if e.type == pygame.VIDEORESIZE or e.type == pygame.WINDOWSIZECHANGED:
+                self.games_viewport.viewport_width = None  # Auto adjust to maximum
+                self.draw(force=True)
+                return
+            elif e.type == pygame.QUIT or (e.type == controls.COMMAND_EVENT and e.command == "EXIT"):
+                return False
+
         super().process_events(events)
 
     def compose(self, surface):
@@ -249,8 +250,10 @@ class Ui:
     def __init__(self):
         pygame.init()
         pygame.display.set_caption("Lutris-UI")
-        self._screen = pygame.display.set_mode((1280, 720), flags=pygame.RESIZABLE)
-        # self._screen = pygame.display.set_mode(flags=pygame.FULLSCREEN)
+        if "--fullscreen" in sys.argv or "-f" in sys.argv:
+            self._screen = pygame.display.set_mode(flags=pygame.FULLSCREEN + pygame.RESIZABLE)
+        else:
+            self._screen = pygame.display.set_mode((1280, 720), flags=pygame.RESIZABLE)
         self.screen_widget = UiScreen(self._screen, 0, 0, 0, 0)
 
     def draw_ui(self):

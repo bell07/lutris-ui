@@ -136,8 +136,14 @@ class UiWidget:
 
     def set_focus(self, focus=True):
         if self.is_focus != focus:
+            if focus is True and self.parent_widget is not None:
+                for widget in self.parent_widget.widgets:
+                    if widget != self:
+                        widget.set_focus(False)
             self.is_focus = focus
             self.set_changed()
+            if self.parent_widget is not None:
+                self.parent_widget.set_focus(focus)
 
     def draw(self, force=False):
         if self.is_visible is False:
@@ -177,33 +183,31 @@ class UiWidget:
                     return widget
 
     def process_events(self, events):
-        selected_widget = self.selected_widget
-
         for e in events:
             match e.type:
                 case pygame.MOUSEBUTTONUP:
                     if e.button <= 3:  # 4 and 5 are wheel
                         selected_widget = self.get_child_by_pos(e.pos)
-                        if selected_widget is not None:
+                        if selected_widget is not None and selected_widget.is_interactive is True:
                             self.selected_widget = selected_widget
                             self.selected_widget.set_focus()
 
-        if selected_widget is not None:
-            widget_rect = self.get_widget_dimensions()
+        for widget in self.widgets:
+            if widget.is_interactive is False:
+                continue
+            widget_events = []
             for e in events:
                 if hasattr(e, "pos"):
-                    pos_x, pos_y = e.pos
-                    e.pos = (pos_x - widget_rect.x, pos_y - widget_rect.y)
+                    widget_rect = widget.get_widget_dimensions()
+                    if widget_rect.collidepoint(e.pos):
+                        event_data = e.dict.copy()
+                        event_data["pos"] = (e.pos[0] - widget_rect.x, e.pos[1] - widget_rect.y)
+                        widget_event = pygame.event.Event(e.type, event_data)
+                        widget_events.append(widget_event)  # Position inside the widget. Pass event
+                elif widget.is_focus is True:
+                    widget_events.append(e)  # Position-less events to widget with focus only
 
-            selected_widget.process_events(events)
-        else:
-            filtered_events = []
-            for e in events:
-                if not hasattr(e, "pos"):
-                    filtered_events.append(e)
-            if len(filtered_events) > 0:
-                for widget in self.widgets:
-                    widget.process_events(filtered_events)
+            widget.process_events(widget_events)
 
 
 class UiWidgetStatic(UiWidget):
@@ -295,6 +299,19 @@ class UiWidgetsScrollbar(UiWidget):
                 max_width - SCROLLBAR_WIDTH - SCROLLBAR_BORDER, cur_value + SCROLLBAR_BORDER,
                 SCROLLBAR_WIDTH - 2 * SCROLLBAR_BORDER, min_value), border_radius=int(SCROLLBAR_WIDTH / 2))
 
+    def process_events(self, events):
+        for e in events:
+            match e.type:
+                case pygame.MOUSEMOTION:
+                    if pygame.BUTTON_LEFT in e.buttons:
+                        if self.is_horizontal is True:
+                            self.parent_widget.shift_x = self.parent_widget.shift_x + (
+                                    e.rel[0] / self.min_value * self.max_value)
+                        else:
+                            self.parent_widget.shift_y = self.parent_widget.shift_y + (
+                                    e.rel[1] / self.min_value * self.max_value)
+                        self.set_changed()
+
 
 class UiWidgetsViewport(UiWidgetStatic):
     def __init__(self, parent, x, y, w, h):
@@ -305,7 +322,7 @@ class UiWidgetsViewport(UiWidgetStatic):
         self._old_shift_y = None
         self.viewport_width = None
         self.viewport_height = None
-        self.vertical_scrollbar_widget = None
+        self.vertical_scrollbar_widget = UiWidgetsScrollbar(self, False)
 
     def set_viewport_size(self, w, h):
         self.viewport_width = w
@@ -327,13 +344,6 @@ class UiWidgetsViewport(UiWidgetStatic):
         self._widget_surface = pygame.surface.Surface((self.viewport_width, self.viewport_height))
         return self._widget_surface
 
-    def set_vertical_scrollbar(self, scrollbar_widget=None):
-        if scrollbar_widget is None:
-            # Create own widget
-            self.vertical_scrollbar_widget = UiWidgetsScrollbar(self, False)
-        else:
-            self.vertical_scrollbar_widget = scrollbar_widget
-
     def get_visible_surface(self):
         viewport_surface = self.get_surface()
         widget_rect = self.get_widget_dimensions()
@@ -353,6 +363,12 @@ class UiWidgetsViewport(UiWidgetStatic):
 
         if self.viewport_height < self.shift_y + widget_rect.h:
             self.shift_y = self.viewport_height - widget_rect.h
+
+        if self.shift_x < 0:
+            self.shift_x = 0
+
+        if self.shift_y < 0:
+            self.shift_y = 0
 
         if self.shift_x != self._old_shift_x or self.shift_y != self._old_shift_y:
             self.set_changed()

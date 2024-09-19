@@ -6,9 +6,12 @@ from lutris.database import games, categories
 
 
 class LutrisDb:
-    def __init__(self):
+    def __init__(self, ui_screen):
         self.games_data = []
         self.reload()
+        self.running_game_popen = None
+        self.ui_screen = ui_screen
+        # os.setpgrp()  # Process group to kill
 
     def reload(self):
         self.games_data.clear()
@@ -26,5 +29,20 @@ class LutrisDb:
         if os.path.exists(image_path):
             return image_path
 
-    def launch(self, game_data):
-        subprocess.Popen(["env", "LUTRIS_SKIP_INIT=1", "lutris", f"lutris:rungameid/{game_data['id']}"])
+    def launch(self, game):
+        self.running_game_popen = subprocess.Popen(
+            ["env", "LUTRIS_SKIP_INIT=1", "lutris", f"lutris:rungameid/{game.data['id']}"])
+        self.ui_screen.games_viewport.is_interactive = False
+        self.ui_screen.game_is_running.game = game
+        self.ui_screen.game_is_running.is_visible = True
+        self.ui_screen.game_is_running.set_focus()
+
+    def check_is_running(self):
+        if self.running_game_popen is False:
+            return False
+        if self.running_game_popen.poll() is not None:
+            return False
+        return True
+
+    def kill_running(self):
+        self.running_game_popen.terminate()
