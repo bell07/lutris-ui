@@ -4,17 +4,17 @@ import pygame
 
 import controls
 from lutrisdb import LutrisDb
-from uiwidgets import UiWidget, UiWidgetsViewport, UiWidgetStatic
+from uiwidgets import UiWidgetStatic, UiWidgetViewport, UiWidget, DynamicTypes
 
-GAME_MAX_WIDTH = 200  # Todo: Setting
+GAME_MAX_WIDTH = 300  # Todo: Setting
 GAME_MAX_HEIGHT = GAME_MAX_WIDTH * 1.4
 GAME_BORDER_WIDTH = 10  # ToDo: Setting
 GAME_BORDER_HEIGHT = 10  # ToDo: Setting
 
 
 class UiGameWidget(UiWidgetStatic):
-    def __init__(self, parent, x, y, w, h, game_data):
-        super().__init__(parent, x, y, w, h)
+    def __init__(self, parent, game_data, **kwargs):
+        super().__init__(parent, **kwargs)
         self._coverart = game_data.get("coverart")
         self.name = game_data["name"]
         self.data = game_data["game_data"]
@@ -23,13 +23,13 @@ class UiGameWidget(UiWidgetStatic):
     def blit_text(surface, text, pos, font, color=pygame.Color('black')):
         words = [word.split(' ') for word in text.splitlines()]  # 2D array where each row is a list of words.
         space = font.size(' ')[0]  # The width of a space.
-        max_width, max_height = surface.get_size()
+        (max_width, max_height) = surface.get_size()
         x, y = pos
         for line in words:
             line_height = 0
             for word in line:
                 word_surface = font.render(word, 0, color)
-                word_width, word_height = word_surface.get_size()
+                (word_width, word_height) = word_surface.get_size()
                 if x + word_width >= max_width:
                     x = pos[0]  # Reset the x.
                     y += word_height  # Start on new row.
@@ -85,13 +85,23 @@ class UiGameWidget(UiWidgetStatic):
             match e.type:
                 case pygame.MOUSEBUTTONUP:
                     if e.button == pygame.BUTTON_LEFT:
-                        self.launch()
+                        if e.touch is False:
+                            self.launch()
+                        else:
+                            if self.is_focus is True:
+                                self.launch()
+                            else:
+                                self.set_focus()
                         break
 
+    def set_focus(self, focus=True):
+        super().set_focus(focus)
+        self.parent_widget.selected_widget = self
 
-class UiGameListWidget(UiWidgetsViewport):
-    def __init__(self, parent, ldb, x, y, w, h):
-        super().__init__(parent, x, y, w, h)
+
+class UiGameListWidget(UiWidgetViewport):
+    def __init__(self, parent, ldb, **kwargs):
+        super().__init__(parent, **kwargs)
         self.ldb = ldb
         self.max_games_cols = 0
         self.game_widgets = []
@@ -108,36 +118,40 @@ class UiGameListWidget(UiWidgetsViewport):
         return pos_x, pos_y
 
     def update_games_list(self, force=False):
-        widget_rect = self.get_widget_dimensions()
-        mew_max_games_cols = int(widget_rect.w / (GAME_MAX_WIDTH + GAME_BORDER_WIDTH))
-        if mew_max_games_cols == 0:
-            mew_max_games_cols = 1
+        (visible_width, visible_height) = self.get_rect().size
+        new_max_games_cols = int(visible_width / (GAME_MAX_WIDTH + GAME_BORDER_WIDTH))
+        if new_max_games_cols == 0:
+            new_max_games_cols = 1
 
-        if mew_max_games_cols != self.max_games_cols or force is True:
-            self.max_games_cols = mew_max_games_cols
+        if new_max_games_cols != self.max_games_cols or force is True:
+            update_widgets = True
+        else:
+            update_widgets = False
 
-            games_data = self.ldb.games_data
-            viewport_height = (int((len(games_data) - 1) / self.max_games_cols) + 1) * (
-                    GAME_MAX_HEIGHT + GAME_BORDER_HEIGHT)
-            if viewport_height < widget_rect.h:
-                viewport_height = widget_rect.h
-            viewport_width = widget_rect.w
-            if viewport_width < GAME_MAX_HEIGHT + GAME_BORDER_HEIGHT:
-                viewport_width = GAME_MAX_HEIGHT + GAME_BORDER_HEIGHT
+        self.max_games_cols = new_max_games_cols
 
-            self.set_viewport_size(viewport_width, viewport_height)
+        games_data = self.ldb.games_data
+        viewport_height = (int((len(games_data) - 1) / self.max_games_cols) + 1) * (
+                GAME_MAX_HEIGHT + GAME_BORDER_HEIGHT)
+        if viewport_height < visible_height:
+            viewport_height = visible_height
+        viewport_width = visible_width
+        if viewport_width < GAME_MAX_HEIGHT + GAME_BORDER_HEIGHT:
+            viewport_width = GAME_MAX_HEIGHT + GAME_BORDER_HEIGHT
 
-            if len(self.game_widgets) == 0:
-                for idx, game_data in enumerate(games_data):
-                    pos_x, pos_y = self.get_game_position(idx + 1)
-                    self.game_widgets.append(
-                        UiGameWidget(self, pos_x, pos_y, GAME_MAX_WIDTH, GAME_MAX_HEIGHT, game_data))
-            else:
-                for idx, widget in enumerate(self.game_widgets):
-                    pos_x, pos_y = self.get_game_position(idx + 1)
-                    widget.def_x = pos_x
-                    widget.def_y = pos_y
-                    widget.set_changed()
+        self.set_viewport_size(viewport_width, viewport_height)
+
+        if len(self.game_widgets) == 0:
+            for idx, game_data in enumerate(games_data):
+                pos_x, pos_y = self.get_game_position(idx + 1)
+                self.game_widgets.append(
+                    UiGameWidget(self, game_data, pos_x=pos_x, pos_y=pos_y,
+                                 size_w=GAME_MAX_WIDTH, size_h=GAME_MAX_HEIGHT))
+        elif update_widgets is True:
+            for idx, widget in enumerate(self.game_widgets):
+                pos_x, pos_y = self.get_game_position(idx + 1)
+                widget.set_pos(pos_x=pos_x, pos_y=pos_y)
+                widget.set_changed()
 
     def select_game(self, command):
         if command == "ENTER" and isinstance(self.selected_widget, UiGameWidget):
@@ -172,11 +186,11 @@ class UiGameListWidget(UiWidgetsViewport):
             selected_game_index = len(self.game_widgets) - 1
 
         # Select new
-        self.selected_widget = self.game_widgets[selected_game_index]
-        self.selected_widget.set_focus()
+        selected_widget = self.game_widgets[selected_game_index]
+        selected_widget.set_focus()
 
-        viewport_h = self.get_widget_dimensions().height
-        widget_rect = self.selected_widget.get_widget_dimensions(self.get_surface())
+        viewport_h = self.get_rect().height
+        widget_rect = selected_widget.get_rect()
         if widget_rect.y < self.shift_y:
             self.shift_y = widget_rect.y
 
@@ -184,6 +198,9 @@ class UiGameListWidget(UiWidgetsViewport):
             self.shift_y = widget_rect.y + widget_rect.h - viewport_h
 
     def process_events(self, events):
+        super().process_events(events)
+
+        # Scroll after other events processed
         for e in events:
             match e.type:
                 case controls.COMMAND_EVENT:
@@ -191,7 +208,6 @@ class UiGameListWidget(UiWidgetsViewport):
                 case pygame.MOUSEWHEEL:
                     self.shift_y = self.shift_y - (e.y * GAME_MAX_HEIGHT / 4)
                     self.set_changed()
-        super().process_events(events)
 
     def draw(self, force=False, draw_to_parent=True):
         if force is True:
@@ -204,7 +220,7 @@ class UiGameListWidget(UiWidgetsViewport):
 class UiGameIsRunningWidget(UiWidget):
     def __init__(self, parent, ldb):
         self.ldb = ldb
-        super().__init__(parent, 0, 0, 0, 0)  # Will be resized
+        super().__init__(parent)  # Will be resized
         self.is_visible = False
         self.game = None
 
@@ -220,16 +236,17 @@ class UiGameIsRunningWidget(UiWidget):
 
 
 class UiScreen(UiWidget):
-    def __init__(self, parent, x, y, w, h):
-        super().__init__(parent, x, y, w, h)
+    def __init__(self, parent, **kwargs):
+        super().__init__(parent, **kwargs)
         ldb = LutrisDb(self)
-        self.games_viewport = UiGameListWidget(self, ldb, 5, 5, -5, -5)
+        self.games_viewport = UiGameListWidget(self, ldb, size_w=-10, size_h=-10,
+                                               pos_x_type=DynamicTypes.TYPE_CENTER, pos_y_type=DynamicTypes.TYPE_CENTER)
         self.game_is_running = UiGameIsRunningWidget(self, ldb)
 
     def process_events(self, events):
         for e in events:
             if e.type == pygame.VIDEORESIZE or e.type == pygame.WINDOWSIZECHANGED:
-                self.games_viewport.viewport_width = None  # Auto adjust to maximum
+                self.detached_surface_changed = True
                 self.draw(force=True)
                 return
             elif e.type == pygame.QUIT or (e.type == controls.COMMAND_EVENT and e.command == "EXIT"):
@@ -254,7 +271,7 @@ class Ui:
             self._screen = pygame.display.set_mode(flags=pygame.FULLSCREEN + pygame.RESIZABLE)
         else:
             self._screen = pygame.display.set_mode((1280, 720), flags=pygame.RESIZABLE)
-        self.screen_widget = UiScreen(self._screen, 0, 0, 0, 0)
+        self.screen_widget = UiScreen(self._screen)
 
     def draw_ui(self):
         self.screen_widget.draw()
