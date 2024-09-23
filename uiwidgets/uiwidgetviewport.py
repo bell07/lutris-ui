@@ -7,7 +7,7 @@ SCROLLBAR_BORDER = 2
 
 
 class UiWidgetsScrollbar(UiWidget):
-    def __init__(self, parent, is_horizontal, **kwargs):
+    def __init__(self, parent: UiWidget, is_horizontal: bool, **kwargs):
         super().__init__(parent, **kwargs)
         self.is_horizontal = is_horizontal
         if is_horizontal:
@@ -21,15 +21,15 @@ class UiWidgetsScrollbar(UiWidget):
         self.min_value = 0
         self.max_value = 0
 
-    def get_parent_surface(self):
+    def get_parent_surface(self) -> pygame.Surface:
         if self._parent_surface is None or self.is_parent_changed():
             self._parent_surface = self.parent_widget.get_visible_surface()
         return self._parent_surface
 
-    def get_parent_size(self):
+    def get_parent_size(self) -> (int, int):
         return self.get_parent_surface().get_size()
 
-    def compose_to_parent(self, surface):
+    def compose_to_parent(self, surface: pygame.Surface) -> bool:
         if self.min_value >= self.max_value:
             return False
 
@@ -50,7 +50,7 @@ class UiWidgetsScrollbar(UiWidget):
                 max_width - SCROLLBAR_WIDTH - SCROLLBAR_BORDER, cur_value + SCROLLBAR_BORDER,
                 SCROLLBAR_WIDTH - 2 * SCROLLBAR_BORDER, min_value), border_radius=int(SCROLLBAR_WIDTH / 2))
 
-    def process_events(self, events):
+    def process_events(self, events: list, pos: (int, int) = None) -> None:
         for e in events:
             match e.type:
                 case pygame.MOUSEMOTION:
@@ -65,7 +65,7 @@ class UiWidgetsScrollbar(UiWidget):
 
 
 class UiWidgetViewport(UiWidgetStatic):
-    def __init__(self, parent, **kwargs):
+    def __init__(self, parent: UiWidget, **kwargs):
         super().__init__(parent, **kwargs)
         self.shift_x = 0
         self.shift_y = 0
@@ -75,13 +75,13 @@ class UiWidgetViewport(UiWidgetStatic):
         self.viewport_height = None
         self.vertical_scrollbar_widget = UiWidgetsScrollbar(self, False)
 
-    def set_viewport_size(self, w, h):
+    def set_viewport_size(self, w: int, h: int) -> None:
         if self.viewport_width != w or self.viewport_height != h:
             self.viewport_width = w
             self.viewport_height = h
             self.set_changed()
 
-    def get_surface(self):
+    def get_surface(self) -> pygame.Surface:
         (w, h) = self.get_rect().size
         if self.viewport_width is None or self.viewport_height is None:
             if self.viewport_width is None:
@@ -94,17 +94,17 @@ class UiWidgetViewport(UiWidgetStatic):
             self.set_changed()
         return self._widget_surface
 
-    def get_size(self):
+    def get_size(self) -> (int, int):
         return self.get_surface().get_size()
 
-    def get_visible_surface(self):
+    def get_visible_surface(self) -> pygame.Surface:
         viewport_surface = self.get_surface()
         (w, h) = self.get_rect().size
         return viewport_surface.subsurface((self.shift_x, self.shift_y, w, h))
 
-    def draw(self, force=False, draw_to_parent=True):
+    def draw(self, force: bool = False, draw_to_parent: bool = True) -> bool:
         if self.is_visible is False:
-            return
+            return False
 
         if force is True:
             self.set_changed()
@@ -133,14 +133,14 @@ class UiWidgetViewport(UiWidgetStatic):
             self.vertical_scrollbar_widget.min_value = widget_rect.h
             self.vertical_scrollbar_widget.max_value = self.viewport_height
             self.vertical_scrollbar_widget.current_value = self.shift_y
-            self.vertical_scrollbar_widget.is_visible = False  # Draw on top later
+            self.vertical_scrollbar_widget.set_visible(False)
 
         # Draw viewport content
         updated = super().draw(force, draw_to_parent=False)
         if updated is True or self.is_parent_changed() is True:
             # Adjust scrollbar
             if self.vertical_scrollbar_widget is not None:
-                self.vertical_scrollbar_widget.is_visible = True
+                self.vertical_scrollbar_widget.set_visible(True)
                 self.vertical_scrollbar_widget.set_changed()
                 self.vertical_scrollbar_widget.draw(force)
 
@@ -152,23 +152,27 @@ class UiWidgetViewport(UiWidgetStatic):
             self.unset_changed()
         return updated
 
-    def get_widget_collidepoint(self, widget, pos):
+    def get_widget_collide_point(self, widget: UiWidget, pos: (int, int)) -> (int, int):
         pos_x, pos_y = pos
         shift_pos = (pos_x + self.shift_x, pos_y + self.shift_y)
         widget_rect = widget.get_rect()
         if widget_rect.collidepoint(shift_pos):
             return shift_pos[0] - widget_rect.x, shift_pos[1] - widget_rect.y
 
-    def process_events(self, events):
+    def process_events(self, events: list, pos: (int, int) = None) -> None:
+        vertical_scrollbar_pointed = pos is not None and pos[0] > self.get_rect().width - SCROLLBAR_WIDTH * 2
+        scrolled = False
+
+        # vertical scrollbar is pointed
         for e in events:
-            match e.type:
-                case pygame.MOUSEMOTION:
-                    if e.pos[0] > self.get_rect().width - SCROLLBAR_WIDTH * 2:
-                        self.vertical_scrollbar_widget.process_events(events)
-                        return
-                    if e.touch is True:
-                        self.shift_x = self.shift_x + (e.rel[0] * 5)
-                        self.shift_y = self.shift_y - (e.rel[1] * 5)
-                        self.set_changed()
-                        return
-        super().process_events(events)
+            if e.type == pygame.MOUSEMOTION:
+                if vertical_scrollbar_pointed is True:
+                    self.vertical_scrollbar_widget.process_events(events, pos)
+                    return
+                if e.touch is True:
+                    self.shift_x = self.shift_x + (e.rel[0] * 5)
+                    self.shift_y = self.shift_y - (e.rel[1] * 5)
+                    self.set_changed()
+                    scrolled = True
+        if scrolled is False:
+            super().process_events(events, pos)

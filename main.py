@@ -1,17 +1,19 @@
 import pygame
 
 from controls import Controls
-from ui import Ui
+from lutrisuiapp import LutrisUiApp
 
 if __name__ == '__main__':
-    ui = Ui()
+    app = LutrisUiApp()
     ctr = Controls()
 
     while True:
         ctr.update_controls()
-        if ui.process_controls(ctr) is False:
+        if app.process_tick(ctr.get_tick_time()) is False:
             break
-        ui.draw_ui()
+        if app.process_events(ctr.events) is False:
+            break
+        app.draw()
         ctr.game_tick()
 
     pygame.quit()

@@ -27,13 +27,13 @@ class Controls:
         self._pressed_event = None
 
     @staticmethod
-    def init_all_js():
+    def init_all_js() -> None:
         pygame.joystick.init()
         for i in range(pygame.joystick.get_count()):
             pygame.joystick.Joystick(i).init()
 
     @staticmethod
-    def _is_same(event1, event2):
+    def _is_same(event1: pygame.event.Event, event2: pygame.event.Event) -> bool:
         if event1.type != event2.type:  # Different types
             if (event1.type == pygame.KEYDOWN and event2.type == pygame.KEYUP) or (
                     event2.type == pygame.KEYDOWN and event1.type == pygame.KEYUP):
@@ -49,7 +49,7 @@ class Controls:
 
         return True
 
-    def _press(self, command, event):
+    def _press(self, command: str, event: pygame.event.Event) -> bool:
         if self._pressed_command == command and self._is_same(self._pressed_event, event):
             return False
         else:
@@ -59,12 +59,12 @@ class Controls:
             self._timer2 = None
             return True  # Pressed first time
 
-    def _release(self, release_event):
+    def _release(self, release_event: pygame.event.Event) -> None:
         if self._pressed_event is not None and self._is_same(release_event, self._pressed_event):
             self._pressed_command = None
             self._pressed_event = None
 
-    def _get_repeated_key(self):
+    def _get_repeated_key(self) -> pygame.event.Event | None:
         # Nothing pressed
         if self._pressed_command is None:
             return None
@@ -91,7 +91,7 @@ class Controls:
         return pygame.event.Event(COMMAND_EVENT, {"command": self._pressed_command, "origin": self._pressed_event})
 
     @staticmethod
-    def _dir_to_code(vector):
+    def _dir_to_code(vector: (float, float)) -> str:
         x, y = vector
         press = 0.8  # Full press only
         if x <= -press:
@@ -103,14 +103,14 @@ class Controls:
         if y <= -press:
             return "DOWN"
 
-    def _append_custom_event(self, command, event, events):
+    def _append_custom_event(self, command: str, event: pygame.event.Event, events: list):
         if command in REPEATABLE:
             if self._press(command, event) is True:
                 events.append(pygame.event.Event(COMMAND_EVENT, {"command": command, "origin": event}))
         else:
             events.append(pygame.event.Event(COMMAND_EVENT, {"command": command, "origin": event}))
 
-    def _apply_custom_events(self, events):
+    def _apply_custom_events(self, events: list) -> list:
         mapped_events = []
         for e in events:
             match e.type:
@@ -157,7 +157,7 @@ class Controls:
                     mapped_events.append(e)
         return mapped_events
 
-    def update_controls(self):
+    def update_controls(self) -> None:
         # Basic processing. Track release key
         events = []
         for e in pygame.event.get():
@@ -183,5 +183,8 @@ class Controls:
         if repeat_event is not None:
             self.events.append(repeat_event)
 
-    def game_tick(self):
+    def game_tick(self) -> None:
         self._clock.tick(30)  # limits FPS to 30
+
+    def get_tick_time(self) -> float:
+        return self._clock.get_time()  # Milliseconds

@@ -1,4 +1,4 @@
-from pygame import Rect
+from pygame import Rect, Surface
 
 
 class DynamicTypes:
@@ -8,9 +8,9 @@ class DynamicTypes:
 
 
 class DynamicRect:
-    def __init__(self, parent_w=None, parent_h=None, pos_x_type=DynamicTypes.TYPE_PIXEL, pos_x=0,
-                 pos_y_type=DynamicTypes.TYPE_PIXEL, pos_y=0, size_w_type=None, size_w=None, size_h_type=None,
-                 size_h=None):
+    def __init__(self, parent_w: float = None, parent_h: float = None, pos_x_type: int = DynamicTypes.TYPE_PIXEL,
+                 pos_x: float = 0, pos_y_type: int = DynamicTypes.TYPE_PIXEL, pos_y: float = 0, size_w_type: int = None,
+                 size_w: float = None, size_h_type: int = None, size_h: float = None):
         self.parent_w = parent_w
         self.parent_h = parent_h
         self.pos_x_type = pos_x_type
@@ -34,7 +34,7 @@ class DynamicRect:
         self.changed = True
         self._rect = None
 
-    def set_parent_size(self, parent_w=None, parent_h=None):
+    def set_parent_size(self, parent_w: float = None, parent_h: float = None) -> None:
         if parent_w is not None and parent_w != self.parent_w:
             self.parent_w = parent_w
             self.changed = True
@@ -42,7 +42,7 @@ class DynamicRect:
             self.parent_h = parent_h
             self.changed = True
 
-    def set_pos(self, pos_x_type=None, pos_x=None, pos_y_type=None, pos_y=None):
+    def set_pos(self, pos_x_type: int = None, pos_x: float = None, pos_y_type: int = None, pos_y: float = None) -> None:
         if pos_x is not None:
             self.pos_x_type = pos_x_type or DynamicTypes.TYPE_PIXEL
             self.pos_x = pos_x
@@ -60,17 +60,17 @@ class DynamicRect:
             self.size_h = size_h
         self.changed = True
 
-    def set_parent_size_by_surface(self, parent_surface):
+    def set_parent_size_by_surface(self, parent_surface: Surface) -> None:
         self.set_parent_size(*parent_surface.get_size())
 
-    def get_size(self):
+    def get_size(self) -> (int, int):
         rect = self.get_rect()
         return rect.w, rect.h
 
-    def get_rect(self):
+    def get_rect(self) -> Rect:
         if self._rect is not None and self.changed is False:
             return self._rect
-
+        w, h, x, y = 0, 0, 0, 0
         assert self.parent_w is not None and self.parent_h is not None, "Parent size required for rect calculations"
         assert self.size_w_type != DynamicTypes.TYPE_CENTER and self.size_h_type != DynamicTypes.TYPE_CENTER, "TYPE_CENTER not supported for size"
         match self.size_w_type:
