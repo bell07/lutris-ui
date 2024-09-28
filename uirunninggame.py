@@ -1,7 +1,10 @@
+import os  # xdotool
+
 import pygame
 
 import controls
 from lutrisdb import LutrisDb
+from settings import Settings
 from uigamelist import UiGameWidget
 from uiwidgets import UiWidget, DynamicTypes, UiWidgetTextBlock
 
@@ -15,9 +18,9 @@ class UiRunningGameWidget(UiGameWidget):
 
 
 class UiTerminateGame(UiWidgetTextBlock):
-    def __init__(self, parent: UiWidget, label: str, **kwargs) -> None:
-        super().__init__(parent=parent, text=label, **kwargs)
-        self.bg_color = pygame.Color(200, 200, 200)
+    def __init__(self, parent: UiWidget, **kwargs) -> None:
+        super().__init__(parent=parent, text="Terminate", text_centered_x=True, text_centered_y=True, **kwargs)
+        self.bg_color = pygame.Color("Red")
 
     def process_events(self, events: list, pos: (int, int) = None) -> None:
         for e in events:
@@ -40,7 +43,8 @@ class UiGameIsRunningWidget(UiWidget):
         self.is_visible = False
         self.game = None
         self.game_widget = None
-        self.button = UiTerminateGame(self, "Terminate", size_h=60, pos_x_type=DynamicTypes.TYPE_CENTER, pos_y=-1)
+        self.button = UiTerminateGame(self, size_h=60, pos_x_type=DynamicTypes.TYPE_CENTER, pos_y=-1)
+        self._hide_on_launch = Settings("play").get("hide_on_launch", False)
 
     def set_running(self, game: UiGameWidget) -> None:
         self.game = game
@@ -53,6 +57,9 @@ class UiGameIsRunningWidget(UiWidget):
             self.game_widget.name = game.name
             self.game_widget.data = game.data
             self.game_widget.set_changed()
+        if self._hide_on_launch is True:
+            # self.parent_widget.save_display_settings() # Does not work yet
+            pygame.display.iconify()
 
     def process_tick(self, milliseconds: int) -> None:
         if self.game is None:
@@ -61,8 +68,15 @@ class UiGameIsRunningWidget(UiWidget):
         if self.ldb.check_is_running() is False:
             self.parent_widget.games_viewport.set_interactive()
             self.parent_widget.games_viewport.set_focus()
+            self.parent_widget.games_viewport.set_changed()
+
             self.set_visible(False)
             self.game = None
-            self.parent_widget.set_changed()
+            if self._hide_on_launch is True:
+                # self.parent_widget.init_display_settings() # Does not work yet
+                window_id = pygame.display.get_wm_info()['window']
+                os.system(f"xdotool windowactivate {window_id}")
+
+            pygame.time.wait(500)  # Wait till lutris is really finished
         else:
-            pygame.time.wait(970)
+            pygame.time.wait(270)

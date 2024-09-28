@@ -64,7 +64,7 @@ class UiWidget:
         return False
 
     def is_changed(self) -> bool:
-        return self._is_changed is True
+        return self._is_changed
 
     def is_parent_changed(self) -> bool:
         return self.parent_widget.is_changed()

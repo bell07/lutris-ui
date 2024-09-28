@@ -1,0 +1,35 @@
+// example settings file
+// can be placed at ~/.config/lutris-ui/config.json5 for adjustments
+
+{
+	// the list
+	gamelist: {
+		// Sort type and order. Supported types are: name, sortname, lastplayed, installed_at
+		sort_attribute: "lastplayed",
+		reverse_sort: true
+	},
+
+	// Settings for single game widget
+	game_widget: {
+		// width. THe geight is calculated based on width
+		width: 240,
+		// widget border sizes
+		border_width: 10,
+		border_height: 10,
+		// Label height bellow the widget
+		label_height: 65
+	},
+
+	// Input settings
+	input: {
+		// time in miliseconds, the hold (arrow) button is repeated first time
+		repeat_time_1: 500,
+		// time in miliseconds, the hold (arrow) button is repeated after the first time
+		repeat_time_2: 200
+	},
+	// game launch settings
+	play: {
+		// hide lutris-ui if game is launched
+		hide_on_launch: false
+	}
+}

@@ -2,13 +2,15 @@ import pygame
 
 import controls
 from lutrisdb import LutrisDb
+from settings import Settings
 from uiwidgets import *
 
-GAME_MAX_WIDTH = 240  # Todo: Setting
-GAME_MAX_HEIGHT = GAME_MAX_WIDTH * 1.4
-GAME_BORDER_WIDTH = 10  # ToDo: Setting
-GAME_BORDER_HEIGHT = 10  # ToDo: Setting
-TEXT_AREA_HEIGHT = 65  # ToDo: Setting
+game_list_settings = Settings("game_widget")
+GAME_WIDGET_WIDTH = game_list_settings.get("width", 240)
+GAME_WIDGET_HEIGHT = GAME_WIDGET_WIDTH * 1.4
+GAME_BORDER_WIDTH = game_list_settings.get("border_width", 10)
+GAME_BORDER_HEIGHT = game_list_settings.get("border_height", 10)
+TEXT_AREA_HEIGHT = game_list_settings.get("label_height", 65)
 
 
 class UiGameLabel(UiWidgetTextBlock):
@@ -20,16 +22,17 @@ class UiGameLabel(UiWidgetTextBlock):
 class UiGameWidget(UiWidgetStatic):
     def __init__(self, parent: UiWidget, game_data: dict, **kwargs):
         super().__init__(parent, **kwargs)
-        self.set_size(size_w=GAME_MAX_WIDTH, size_h=GAME_MAX_HEIGHT)
+        self.set_size(size_w=GAME_WIDGET_WIDTH, size_h=GAME_WIDGET_HEIGHT)
         self.name = game_data["name"]
         self.data = game_data
         self.label_widget = UiGameLabel(parent=self, bg_color=pygame.Color(255, 255, 255),
+                                        text_centered_x=True, text_centered_y=True,
                                         pos_x_type=DynamicTypes.TYPE_CENTER, pos_y=-GAME_BORDER_WIDTH / 2,
-                                        size_w=GAME_MAX_WIDTH - GAME_BORDER_WIDTH, size_h=TEXT_AREA_HEIGHT)
+                                        size_w=GAME_WIDGET_WIDTH - GAME_BORDER_WIDTH, size_h=TEXT_AREA_HEIGHT)
 
     def compose(self, surface: pygame.Surface) -> None:
-        max_w = GAME_MAX_WIDTH - GAME_BORDER_WIDTH
-        max_h = GAME_MAX_HEIGHT - GAME_BORDER_HEIGHT
+        max_w = GAME_WIDGET_WIDTH - GAME_BORDER_WIDTH
+        max_h = GAME_WIDGET_HEIGHT - GAME_BORDER_HEIGHT
 
         if self.is_focus is True:
             surface.fill((128, 128, 255))
@@ -95,13 +98,13 @@ class UiGameListWidget(UiWidgetViewport):
     def get_game_position(self, index: int) -> (int, int):
         col = (index - 1) % self.max_games_cols
         row = int((index - 1) / self.max_games_cols)
-        pos_x = col * (GAME_MAX_WIDTH + GAME_BORDER_WIDTH)
-        pos_y = row * (GAME_MAX_HEIGHT + GAME_BORDER_HEIGHT)
+        pos_x = col * (GAME_WIDGET_WIDTH + GAME_BORDER_WIDTH)
+        pos_y = row * (GAME_WIDGET_HEIGHT + GAME_BORDER_HEIGHT)
         return pos_x, pos_y
 
     def update_games_list(self, force: bool = False) -> None:
         (visible_width, visible_height) = self.get_rect().size
-        new_max_games_cols = int(visible_width / (GAME_MAX_WIDTH + GAME_BORDER_WIDTH))
+        new_max_games_cols = int(visible_width / (GAME_WIDGET_WIDTH + GAME_BORDER_WIDTH))
         if new_max_games_cols == 0:
             new_max_games_cols = 1
 
@@ -112,14 +115,14 @@ class UiGameListWidget(UiWidgetViewport):
 
         self.max_games_cols = new_max_games_cols
 
-        games_data = self.ldb.games_data
+        games_data, list_updated = self.ldb.get_games()
         viewport_height = (int((len(games_data) - 1) / self.max_games_cols) + 1) * (
-                GAME_MAX_HEIGHT + GAME_BORDER_HEIGHT)
+                GAME_WIDGET_HEIGHT + GAME_BORDER_HEIGHT)
         if viewport_height < visible_height:
             viewport_height = visible_height
         viewport_width = visible_width
-        if viewport_width < GAME_MAX_HEIGHT + GAME_BORDER_HEIGHT:
-            viewport_width = GAME_MAX_HEIGHT + GAME_BORDER_HEIGHT
+        if viewport_width < GAME_WIDGET_HEIGHT + GAME_BORDER_HEIGHT:
+            viewport_width = GAME_WIDGET_HEIGHT + GAME_BORDER_HEIGHT
 
         self.set_viewport_size(viewport_width, viewport_height)
 
@@ -127,11 +130,21 @@ class UiGameListWidget(UiWidgetViewport):
             for idx, game_data in enumerate(games_data):
                 pos_x, pos_y = self.get_game_position(idx + 1)
                 self.game_widgets.append(UiGameWidget(self, game_data, pos_x=pos_x, pos_y=pos_y))
-        elif update_widgets is True:
-            for idx, widget in enumerate(self.game_widgets):
+        elif update_widgets is True or list_updated is True:
+            for idx, game_data in enumerate(games_data):
                 pos_x, pos_y = self.get_game_position(idx + 1)
-                widget.set_pos(pos_x=pos_x, pos_y=pos_y)
-                widget.set_changed()
+                widget_found = False
+                for widget in self.game_widgets:
+                    if widget.name == game_data["name"]:
+                        widget.set_pos(pos_x=pos_x, pos_y=pos_y)
+                        widget.set_changed()
+                        widget_found = True
+                        break
+                if widget_found is False:
+                    self.game_widgets.append(UiGameWidget(self, game_data, pos_x=pos_x, pos_y=pos_y))
+            for widget in self.game_widgets:
+                if widget.is_changed is False:
+                    self.remove_child(widget)
 
     def select_game(self, command: str) -> None:
         if command == "ENTER" and isinstance(self.focus_child, UiGameWidget):
@@ -186,7 +199,7 @@ class UiGameListWidget(UiWidgetViewport):
                 case controls.COMMAND_EVENT:
                     self.select_game(e.command)
                 case pygame.MOUSEWHEEL:
-                    self.shift_y = self.shift_y - (e.y * GAME_MAX_HEIGHT / 4)
+                    self.shift_y = self.shift_y - (e.y * GAME_WIDGET_HEIGHT / 4)
                     self.set_changed()
 
     def draw(self, force: bool = False, draw_to_parent: bool = True) -> bool:

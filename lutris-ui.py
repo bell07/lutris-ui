@@ -1,7 +1,10 @@
+#!/usr/bin/env python3
+
 import pygame
 
 from controls import Controls
 from lutrisuiapp import LutrisUiApp
+from settings import Settings
 
 if __name__ == '__main__':
     app = LutrisUiApp()
@@ -17,3 +20,4 @@ if __name__ == '__main__':
         ctr.game_tick()
 
     pygame.quit()
+    Settings.save()

@@ -6,14 +6,21 @@ import psutil
 from lutris import settings
 from lutris.database import games, categories
 
+from settings import Settings
+
 
 class LutrisDb:
     def __init__(self):
+        list_settings = Settings("gamelist")
+        self._sort_key = list_settings.get("sort_attribute", "lastplayed")  # sortname, lastplayed, installed_at
+        self._sort_reverse = list_settings.get("reverse_sort", True)
+        self.data_changed = True
         self.games_data = []
-        self.reload()
         self.running_game_pid = None
 
-    def reload(self) -> None:
+    def get_games(self) -> list:
+        if self.data_changed is False:
+            return self.games_data, False
         self.games_data.clear()
         for game_data in games.get_games(filters={"installed": "1"}):
             game_categories = categories.get_categories_in_game(game_data["id"])
@@ -22,6 +29,10 @@ class LutrisDb:
             data = game_data.copy()
             data["coverart"] = self.get_cover_art(game_data)
             self.games_data.append(data)
+
+        self.games_data.sort(key=lambda game: game.get(self._sort_key), reverse=self._sort_reverse)
+        self.data_changed = False
+        return self.games_data, True
 
     @staticmethod
     def get_cover_art(game: dict) -> str:
@@ -34,7 +45,7 @@ class LutrisDb:
         running_game_popen = subprocess.Popen(
             ["env", "LUTRIS_SKIP_INIT=1", "lutris", f"lutris:rungameid/{game_data['id']}"], stdout=subprocess.PIPE)
 
-        while True:
+        for _ in range(10):  # Only first 10 lines
             line = running_game_popen.stdout.readline().strip()
             print(str(line))
             if str(line).find("Started initial process") >= 0:
@@ -47,6 +58,7 @@ class LutrisDb:
         if psutil.pid_exists(self.running_game_pid) is False:
             print("Lutris session closed")
             self.running_game_pid = None
+            self.data_changed = True  # Force reload
             return False
         return True
 

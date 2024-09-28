@@ -1,7 +1,6 @@
 import pygame
 
-REPEAT_TIME_1 = 500  # ms
-REPEAT_TIME_2 = 200  # ms
+from settings import Settings
 
 REPEATABLE = ("UP", "DOWN", "LEFT", "RIGHT")
 
@@ -19,6 +18,9 @@ COMMAND_EVENT = pygame.USEREVENT + 1
 class Controls:
     def __init__(self):
         self.events = None
+        settings = Settings("input")
+        self.repeat_time_1 = settings.get("repeat_time_1", 500)  # ms
+        self.repeat_time_2 = settings.get("repeat_time_2", 200)  # ms
 
         self._clock = pygame.time.Clock()
         self._timer1 = 0  # Timer 1 since key is pressed
@@ -73,7 +75,7 @@ class Controls:
         self._timer1 = self._timer1 + self._clock.get_time()
 
         # Repeat time 1 not reached
-        if self._timer1 < REPEAT_TIME_1 and self._timer2 is None:
+        if self._timer1 < self.repeat_time_1 and self._timer2 is None:
             return None
 
         # Check for timer 2
@@ -84,10 +86,10 @@ class Controls:
             self._timer2 = self._timer2 + self._clock.get_time()
 
             # Repeat time 2 not reached
-        if self._timer2 < REPEAT_TIME_2:
+        if self._timer2 < self.repeat_time_2:
             return None
 
-        self._timer2 = self._timer2 % REPEAT_TIME_2
+        self._timer2 = self._timer2 % self.repeat_time_2
         return pygame.event.Event(COMMAND_EVENT, {"command": self._pressed_command, "origin": self._pressed_event})
 
     @staticmethod
