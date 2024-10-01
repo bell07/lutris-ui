@@ -118,7 +118,7 @@ class Controls:
             match e.type:
                 case pygame.KEYDOWN:
                     code = KBD_MAP.get(e.key)
-                    if code is not None:
+                    if code is not None and e.mod == pygame.KMOD_NONE:
                         self._append_custom_event(code, e, mapped_events)
                     else:
                         mapped_events.append(e)

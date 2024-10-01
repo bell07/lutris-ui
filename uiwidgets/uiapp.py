@@ -62,7 +62,6 @@ class UiApp(UiWidget):
         for e in events:
             if e.type in (pygame.WINDOWSIZECHANGED, pygame.WINDOWRESTORED):
                 self.set_changed()
-                self.draw(force=True)
                 return True
             elif e.type == pygame.QUIT or (e.type == COMMAND_EVENT and e.command == "EXIT"):
                 return False

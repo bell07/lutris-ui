@@ -19,5 +19,5 @@ if __name__ == '__main__':
         app.draw()
         ctr.game_tick()
 
-    pygame.quit()
     Settings.save()
+    pygame.quit()

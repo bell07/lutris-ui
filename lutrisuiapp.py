@@ -19,3 +19,10 @@ class LutrisUiApp(UiApp):
     def init_display_settings(self):
         super().init_display_settings()
         pygame.display.set_caption("Lutris-UI")
+
+    def process_events(self, events: list, pos: (int, int) = None) -> bool:
+        for e in events:
+            if e.type == pygame.KEYDOWN and e.key == pygame.K_RETURN and e.mod == pygame.KMOD_LALT:
+                pygame.display.toggle_fullscreen()
+                return True
+        return super().process_events(events, pos)

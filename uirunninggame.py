@@ -65,7 +65,7 @@ class UiGameIsRunningWidget(UiWidget):
         if self.game is None:
             return
 
-        if self.ldb.check_is_running() is False:
+        if self.ldb.get_lutris_pid() is None:
             self.parent_widget.games_viewport.set_interactive()
             self.parent_widget.games_viewport.set_focus()
             self.parent_widget.games_viewport.set_changed()

@@ -205,6 +205,6 @@ class UiGameListWidget(UiWidgetViewport):
     def draw(self, force: bool = False, draw_to_parent: bool = True) -> bool:
         if force is True:
             self.set_changed()
-        if self.is_changed():
+        if self.is_changed() or self.is_parent_changed():
             self.update_games_list(force)
         return super().draw(force, draw_to_parent)

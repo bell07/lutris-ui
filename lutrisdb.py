@@ -1,6 +1,7 @@
 import os
 import signal
 import subprocess
+from pygame import time
 
 import psutil
 from lutris import settings
@@ -16,9 +17,9 @@ class LutrisDb:
         self._sort_reverse = list_settings.get("reverse_sort", True)
         self.data_changed = True
         self.games_data = []
-        self.running_game_pid = None
+        self.running_game_popen = None
 
-    def get_games(self) -> list:
+    def get_games(self) -> tuple[list, bool]:
         if self.data_changed is False:
             return self.games_data, False
         self.games_data.clear()
@@ -30,7 +31,8 @@ class LutrisDb:
             data["coverart"] = self.get_cover_art(game_data)
             self.games_data.append(data)
 
-        self.games_data.sort(key=lambda game: game.get(self._sort_key), reverse=self._sort_reverse)
+        # Note:  fallback "0" is for non existing lastplayed value. This should not affect sorting by name
+        self.games_data.sort(key=lambda game: game.get(self._sort_key) or 0, reverse=self._sort_reverse)
         self.data_changed = False
         return self.games_data, True
 
@@ -39,35 +41,41 @@ class LutrisDb:
         image_path = os.path.join(settings.COVERART_PATH, f"{game['slug']}.jpg")
         if os.path.exists(image_path):
             return image_path
+        image_path = os.path.join(settings.COVERART_PATH, f"{game['slug']}.png")
+        if os.path.exists(image_path):
+            return image_path
 
     def launch(self, game_data: dict) -> None:
         print(f"Launch Lutris session for {game_data['name']}")
-        running_game_popen = subprocess.Popen(
-            ["env", "LUTRIS_SKIP_INIT=1", "lutris", f"lutris:rungameid/{game_data['id']}"], stdout=subprocess.PIPE)
+        self.running_game_popen = subprocess.Popen(
+            ["env", "LUTRIS_SKIP_INIT=1", "lutris", f"lutris:rungameid/{game_data['id']}"], start_new_session=True)
+        time.wait(1000)
 
-        for _ in range(10):  # Only first 10 lines
-            line = running_game_popen.stdout.readline().strip()
-            print(str(line))
-            if str(line).find("Started initial process") >= 0:
-                self.running_game_pid = int(line.split()[3])
-                break
+    def get_lutris_pid(self) -> int | None:
+        if self.running_game_popen is None:
+            return
 
-    def check_is_running(self) -> bool:
-        if self.running_game_pid is None:
-            return False
-        if psutil.pid_exists(self.running_game_pid) is False:
-            print("Lutris session closed")
-            self.running_game_pid = None
-            self.data_changed = True  # Force reload
-            return False
-        return True
+        for process in psutil.process_iter():
+            try:
+                if process.uids().real != os.getuid():
+                    continue
+                cmdline = process.cmdline()
+            except psutil.ZombieProcess:
+                continue
+            except psutil.NoSuchProcess:
+                continue
+
+            if len(cmdline) > 0 and cmdline[0].startswith("lutris-wrapper:"):
+                return process.pid
+
+        if self.running_game_popen.poll() is None:
+            return self.running_game_popen.pid
+
+        print("Lutris session closed")
+        self.data_changed = True  # Force reload
 
     def kill_running(self) -> None:
-        if self.running_game_pid is not None:
-            print("Kill game")
-            try:
-                os.kill(self.running_game_pid, signal.SIGTERM)
-            except ProcessLookupError:
-                pass
-        else:
-            print("Try to kill not running game :-(")
+        pid = self.get_lutris_pid()
+        if pid is not None:
+            print(f"Kill game PID {pid}")
+            os.kill(pid, signal.SIGTERM)
