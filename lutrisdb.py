@@ -1,7 +1,6 @@
 import os
 import signal
 import subprocess
-from pygame import time
 
 import psutil
 from lutris import settings
@@ -17,7 +16,10 @@ class LutrisDb:
         self._sort_reverse = list_settings.get("reverse_sort", True)
         self.data_changed = True
         self.games_data = []
-        self.running_game_popen = None
+        self.wrapper_pid = None
+        self.launch_pid = None
+        self.pid_list = []
+        self.last_seen = 0
 
     def get_games(self) -> tuple[list, bool]:
         if self.data_changed is False:
@@ -47,35 +49,62 @@ class LutrisDb:
 
     def launch(self, game_data: dict) -> None:
         print(f"Launch Lutris session for {game_data['name']}")
-        self.running_game_popen = subprocess.Popen(
-            ["env", "LUTRIS_SKIP_INIT=1", "lutris", f"lutris:rungameid/{game_data['id']}"], start_new_session=True)
-        time.wait(1000)
+        p = subprocess.Popen(["env", "LUTRIS_SKIP_INIT=1", "lutris", f"lutris:rungameid/{game_data['id']}"],
+                             start_new_session=True)
+        self.launch_pid = p.pid
+        self.pid_list = [p.pid]
+        self.wrapper_pid = None
 
-    def get_lutris_pid(self) -> int | None:
-        if self.running_game_popen is None:
-            return
-
-        for process in psutil.process_iter():
-            try:
-                if process.uids().real != os.getuid():
+    def check_is_running(self) -> bool:
+        if self.wrapper_pid is None:
+            for process in psutil.process_iter():
+                try:
+                    if process.uids().real != os.getuid():
+                        continue
+                    cmdline = process.cmdline()
+                except psutil.ZombieProcess:
                     continue
-                cmdline = process.cmdline()
-            except psutil.ZombieProcess:
-                continue
+                except psutil.NoSuchProcess:
+                    continue
+
+                if len(cmdline) > 0 and cmdline[0].startswith("lutris-wrapper:"):
+                    self.wrapper_pid = process.pid
+                    if not (process.pid in self.pid_list):
+                        self.pid_list.append(process.pid)
+
+        for pid in self.pid_list:
+            try:
+                p = psutil.Process(pid=pid)
+
+                if p.status() == 'zombie':
+                    try:
+                        p.wait(timeout=1)
+                    except psutil.TimeoutExpired:
+                        pass
+
+                if p.is_running():
+                    for child in p.children():
+                        if not (child.pid in self.pid_list):
+                            self.pid_list.append(child.pid)
             except psutil.NoSuchProcess:
+                self.pid_list.remove(pid)
                 continue
 
-            if len(cmdline) > 0 and cmdline[0].startswith("lutris-wrapper:"):
-                return process.pid
-
-        if self.running_game_popen.poll() is None:
-            return self.running_game_popen.pid
-
-        print("Lutris session closed")
-        self.data_changed = True  # Force reload
+        if len(self.pid_list) == 0:  # All processes killed
+            self.last_seen = self.last_seen + 1
+            if self.last_seen >= 6:  # Wait 6 times. Each step is ~ 300 msps
+                print("Lutris session closed")
+                return False
+        else:
+            self.last_seen = 0
+        return True
 
     def kill_running(self) -> None:
-        pid = self.get_lutris_pid()
-        if pid is not None:
-            print(f"Kill game PID {pid}")
-            os.kill(pid, signal.SIGTERM)
+        for pid in reversed(self.pid_list):
+            if pid == self.wrapper_pid or pid == self.launch_pid:  # Do not kill wrapper if other processes are killed
+                return
+            try:
+                os.kill(pid, signal.SIGTERM)
+            except ProcessLookupError:
+                continue
+            print(f"PID {pid} killed")

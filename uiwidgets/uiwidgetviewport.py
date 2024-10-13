@@ -29,7 +29,7 @@ class UiWidgetsScrollbar(UiWidget):
     def get_parent_size(self) -> (int, int):
         return self.get_parent_surface().get_size()
 
-    def compose_to_parent(self, surface: pygame.Surface) -> bool:
+    def compose_to_parent(self, surface: pygame.Surface, rect: pygame.Rect) -> bool:
         if self.min_value >= self.max_value:
             return False
 

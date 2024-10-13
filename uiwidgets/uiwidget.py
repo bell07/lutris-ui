@@ -60,7 +60,7 @@ class UiWidget:
     def compose(self, surface: Surface) -> bool:
         return False
 
-    def compose_to_parent(self, surface: Surface) -> bool:
+    def compose_to_parent(self, surface: Surface, rect: Rect) -> bool:
         return False
 
     def is_changed(self) -> bool:
@@ -72,12 +72,14 @@ class UiWidget:
     def set_changed(self) -> None:
         self._is_changed = True
         self._parent_surface = None
-        self.parent_widget and self.parent_widget.set_child_changed()
+        if self.parent_widget is not None:
+            self.parent_widget and self.parent_widget.set_child_changed()
 
     def set_child_changed(self) -> None:
         if self._child_changed is False:
             self._child_changed = True
-            self.parent_widget and self.parent_widget.set_child_changed()
+            if self.parent_widget is not None:
+                self.parent_widget.set_child_changed()
 
     def unset_changed(self) -> None:
         self._is_changed = False
@@ -118,7 +120,7 @@ class UiWidget:
 
         updated = False
         if self.is_changed() is True or self.is_parent_changed():
-            if self.compose_to_parent(self.get_parent_surface()) is not False:
+            if self.compose_to_parent(self.get_parent_surface(), self.get_rect()) is not False:
                 self.set_changed()
 
             surface = self.get_surface()

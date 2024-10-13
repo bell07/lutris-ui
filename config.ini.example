@@ -11,7 +11,6 @@ border_height = 10
 # Label height in bottom of the widget
 label_height = 65
 
-
 [gamelist]
 # Sort type and order. Supported types are: name, sortname, lastplayed, installed_at
 sort_attribute = lastplayed
@@ -26,4 +25,12 @@ hide_on_launch = False
 repeat_time_1 = 500
 # time in milliseconds, the hold (arrow) button is repeated after the first time
 repeat_time_2 = 200
+
+[window]
+# Window attributes
+fullscreen = False
+noframe = False
+# Zero means maximum size
+size_w = 0
+size_h = 0
 

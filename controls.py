@@ -5,7 +5,7 @@ from settings import Settings
 REPEATABLE = ("UP", "DOWN", "LEFT", "RIGHT")
 
 KBD_MAP = {pygame.K_UP: "UP", pygame.K_DOWN: "DOWN", pygame.K_LEFT: "LEFT", pygame.K_RIGHT: "RIGHT",
-           pygame.K_RETURN: "ENTER", pygame.K_ESCAPE: "EXIT"}
+           pygame.K_RETURN: "ENTER", pygame.K_ESCAPE: "EXIT", pygame.K_r: "RELOAD"}
 
 JOY_MAP = {pygame.CONTROLLER_BUTTON_A: "ENTER", pygame.CONTROLLER_BUTTON_START: "ENTER",
            pygame.CONTROLLER_BUTTON_DPAD_UP: "UP", pygame.CONTROLLER_BUTTON_DPAD_DOWN: "DOWN",

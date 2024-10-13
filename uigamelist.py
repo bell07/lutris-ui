@@ -134,17 +134,22 @@ class UiGameListWidget(UiWidgetViewport):
             for idx, game_data in enumerate(games_data):
                 pos_x, pos_y = self.get_game_position(idx + 1)
                 widget_found = False
-                for widget in self.game_widgets:
-                    if widget.name == game_data["name"]:
-                        widget.set_pos(pos_x=pos_x, pos_y=pos_y)
-                        widget.set_changed()
-                        widget_found = True
-                        break
+                if idx < len(self.game_widgets):
+                    for old_idx in range(idx, len(self.game_widgets)):
+                        widget = self.game_widgets[old_idx]
+                        if widget.name == game_data["name"]:
+                            widget.set_pos(pos_x=pos_x, pos_y=pos_y)
+                            widget.set_changed()
+                            widget_found = True
+                            self.game_widgets.insert(idx, self.game_widgets.pop(old_idx))
+                            break
                 if widget_found is False:
-                    self.game_widgets.append(UiGameWidget(self, game_data, pos_x=pos_x, pos_y=pos_y))
-            for widget in self.game_widgets:
-                if widget.is_changed is False:
+                    self.game_widgets.insert(idx, UiGameWidget(self, game_data, pos_x=pos_x, pos_y=pos_y))
+            if len(games_data) < len(self.game_widgets):
+                for old_idx in range(len(games_data), len(self.game_widgets)):
+                    widget = self.game_widgets[old_idx]
                     self.remove_child(widget)
+                    self.game_widgets.pop(old_idx)
 
     def select_game(self, command: str) -> None:
         if command == "ENTER" and isinstance(self.focus_child, UiGameWidget):
@@ -167,6 +172,9 @@ class UiGameListWidget(UiWidgetViewport):
                 selected_game_index = selected_game_index - 1
             case "RIGHT":
                 selected_game_index = selected_game_index + 1
+            case "RELOAD":
+                self.ldb.data_changed = True
+                self.set_changed()
             case _:
                 for idx, widget in enumerate(self.game_widgets):
                     if widget.name == command:

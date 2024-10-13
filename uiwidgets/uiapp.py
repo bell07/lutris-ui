@@ -1,5 +1,3 @@
-import sys
-
 import pygame
 
 from controls import COMMAND_EVENT
@@ -13,21 +11,32 @@ class UiApp(UiWidget):
         self.is_focus = True
         self._detached_surface = None
         self._detached_surface_changed = None
-        self.screen_data = None
+        self.size_w = 0
+        self.size_h = 0
+        self.fullscreen = False
+        self.noframe = False
         self.init_display_settings()
 
     def init_display_settings(self):
-        if self.screen_data is None:
-            if "--fullscreen" in sys.argv or "-f" in sys.argv:
-                flags = pygame.RESIZABLE + pygame.FULLSCREEN
-                size = (0, 0)
+        pygame.init()
+        if self.fullscreen is True:
+            flags = pygame.RESIZABLE + pygame.FULLSCREEN
+            size = (0, 0)
+        else:
+            if self.noframe is True:
+                flags = pygame.RESIZABLE + pygame.NOFRAME
             else:
                 flags = pygame.RESIZABLE
-                size = (1280, 720)
-            self.screen_data = (size, flags)
-        pygame.init()
+            if self.size_w == 0 or self.size_w == 0:
+                display_info = pygame.display.Info()
+                if self.size_w == 0:
+                    self.size_w = display_info.current_w
+                if self.size_h == 0:
+                    self.size_h = display_info.current_h
+            size = (self.size_w, self.size_h)
+
         self._detached_surface = None
-        self._detached_surface = pygame.display.set_mode(*self.screen_data)
+        self._detached_surface = pygame.display.set_mode(size, flags)
         self.set_parent_surface(self)
 
     def set_parent_surface(self, parent: UiWidget) -> None:

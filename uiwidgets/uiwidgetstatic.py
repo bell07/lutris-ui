@@ -27,10 +27,11 @@ class UiWidgetStatic(UiWidget):
             self.set_changed()
 
         surface = self.get_surface()
+        rect = self.get_rect()
         parent_surface = self.get_parent_surface()
 
         if draw_to_parent is True and (self.is_changed() is True or self.is_parent_changed()):
-            if self.compose_to_parent(parent_surface) is not False:
+            if self.compose_to_parent(parent_surface, rect) is not False:
                 self.parent_widget.set_child_changed()
 
         if self.is_changed() is True:
@@ -45,7 +46,7 @@ class UiWidgetStatic(UiWidget):
         updated = False
         if self._child_changed is True or self.is_parent_changed() is True or self.is_changed() is True:
             if draw_to_parent is True:
-                parent_surface.blit(surface, self.get_rect())
+                parent_surface.blit(surface, rect)
             updated = True
 
         if draw_to_parent is True:
