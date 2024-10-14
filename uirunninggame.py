@@ -42,7 +42,7 @@ class UiGameIsRunningWidget(UiWidget):
         self.is_visible = False
         self.game = None
         self.game_widget = None
-        self.button = UiTerminateGame(self, size_h=60, pos_x_type=DynamicTypes.TYPE_CENTER, pos_y=-1)
+        self.button = UiTerminateGame(self, size_h=60, border_all=10, pos_y=-0.1)
         self._hide_on_launch = Settings("play").get("hide_on_launch", False)
         self._kill_in_progress = False
 
@@ -69,15 +69,11 @@ class UiGameIsRunningWidget(UiWidget):
             self.game_widget.data = game.data
             self.game_widget.set_changed()
         if self._hide_on_launch is True:
-            # self.parent_widget.save_display_settings() # Does not work yet
             pygame.display.iconify()
 
     def process_tick(self, milliseconds: int) -> None:
         if self.game is None:
             return
-
-        if self._kill_in_progress is True:
-            self.ldb.kill_running()
 
         if self.ldb.check_is_running() is False:
             self.ldb.data_changed = True
@@ -88,8 +84,8 @@ class UiGameIsRunningWidget(UiWidget):
             self.set_visible(False)
             self.game = None
             if self._hide_on_launch is True:
-                # self.parent_widget.init_display_settings() # Does not work yet
-                window_id = pygame.display.get_wm_info()['window']
-                os.system(f"xdotool windowactivate {window_id}")
+                self.parent_widget.init_display_settings()
         else:
+            if self._kill_in_progress is True:
+                self.ldb.kill_running()
             pygame.time.wait(270)

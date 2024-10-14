@@ -8,8 +8,8 @@ from uiwidgets import *
 game_list_settings = Settings("game_widget")
 GAME_WIDGET_WIDTH = game_list_settings.get("width", 240)
 GAME_WIDGET_HEIGHT = GAME_WIDGET_WIDTH * 1.4
-GAME_BORDER_WIDTH = game_list_settings.get("border_width", 10)
-GAME_BORDER_HEIGHT = game_list_settings.get("border_height", 10)
+GAME_DISTANCE_WIDTH = game_list_settings.get("distance_width", 10)
+GAME_DISTANCE_HEIGHT = game_list_settings.get("distance_height", 10)
 TEXT_AREA_HEIGHT = game_list_settings.get("label_height", 65)
 
 
@@ -23,16 +23,17 @@ class UiGameWidget(UiWidgetStatic):
     def __init__(self, parent: UiWidget, game_data: dict, **kwargs):
         super().__init__(parent, **kwargs)
         self.set_size(size_w=GAME_WIDGET_WIDTH, size_h=GAME_WIDGET_HEIGHT)
+        self.set_border(border_all=10, border_color="White")
         self.name = game_data["name"]
         self.data = game_data
         self.label_widget = UiGameLabel(parent=self, bg_color=pygame.Color(255, 255, 255),
                                         text_centered_x=True, text_centered_y=True,
-                                        pos_x_type=DynamicTypes.TYPE_CENTER, pos_y=-GAME_BORDER_WIDTH / 2,
-                                        size_w=GAME_WIDGET_WIDTH - GAME_BORDER_WIDTH, size_h=TEXT_AREA_HEIGHT)
+                                        pos_x_type=DynamicTypes.TYPE_CENTER, pos_y=-0.1,
+                                        size_h=TEXT_AREA_HEIGHT)
 
     def compose(self, surface: pygame.Surface) -> None:
-        max_w = GAME_WIDGET_WIDTH - GAME_BORDER_WIDTH
-        max_h = GAME_WIDGET_HEIGHT - GAME_BORDER_HEIGHT
+        max_w = surface.get_width()
+        max_h = surface.get_height()
 
         if self.is_focus is True:
             surface.fill((128, 128, 255))
@@ -40,7 +41,7 @@ class UiGameWidget(UiWidgetStatic):
             surface.fill((255, 255, 255))
 
         if self.data.get("coverart") is None:
-            pygame.draw.rect(surface, (128, 255, 255), (GAME_BORDER_WIDTH / 2, GAME_BORDER_HEIGHT / 2, max_w, max_h))
+            pygame.draw.rect(surface, (128, 255, 255), (0, 0, max_w, max_h))
 
         else:
             img = pygame.image.load(self.data.get("coverart"))
@@ -54,8 +55,8 @@ class UiGameWidget(UiWidgetStatic):
                 zoom_factor = max_w / orig_w
 
             resized = pygame.transform.scale_by(img, zoom_factor)
-            img_pos_x = (max_w - resized.get_width()) / 2 + GAME_BORDER_WIDTH / 2
-            img_pos_y = (max_h - resized.get_height()) / 2 + GAME_BORDER_HEIGHT / 2
+            img_pos_x = (max_w - resized.get_width()) / 2
+            img_pos_y = (max_h - resized.get_height()) / 2
             surface.blit(resized, (img_pos_x, img_pos_y))
 
         if self.label_widget.text != self.name:
@@ -83,13 +84,20 @@ class UiGameWidget(UiWidgetStatic):
                     return
 
     def set_focus(self, focus: bool = True) -> None:
+        if focus == self.is_focus:
+            return
         super().set_focus(focus)
+        if focus is True:
+            self.set_border(border_color=pygame.Color(128, 128, 255), border_all=5)
+        else:
+            self.set_border(border_color="White", border_all=10)
+        self.set_changed()
 
 
 class UiGameListWidget(UiWidgetViewport):
     def __init__(self, parent: UiWidget, ldb: LutrisDb, **kwargs):
         super().__init__(parent, **kwargs)
-        self.bg_color = pygame.Color(200, 200, 200)
+        self.bg_color = "Grey"
         self.ldb = ldb
         self.max_games_cols = 0
         self.game_widgets = []
@@ -98,13 +106,13 @@ class UiGameListWidget(UiWidgetViewport):
     def get_game_position(self, index: int) -> (int, int):
         col = (index - 1) % self.max_games_cols
         row = int((index - 1) / self.max_games_cols)
-        pos_x = col * (GAME_WIDGET_WIDTH + GAME_BORDER_WIDTH)
-        pos_y = row * (GAME_WIDGET_HEIGHT + GAME_BORDER_HEIGHT)
+        pos_x = col * (GAME_WIDGET_WIDTH + GAME_DISTANCE_WIDTH)
+        pos_y = row * (GAME_WIDGET_HEIGHT + GAME_DISTANCE_HEIGHT)
         return pos_x, pos_y
 
     def update_games_list(self, force: bool = False) -> None:
         (visible_width, visible_height) = self.get_rect().size
-        new_max_games_cols = int(visible_width / (GAME_WIDGET_WIDTH + GAME_BORDER_WIDTH))
+        new_max_games_cols = int(visible_width / (GAME_WIDGET_WIDTH + GAME_DISTANCE_WIDTH))
         if new_max_games_cols == 0:
             new_max_games_cols = 1
 
@@ -117,12 +125,12 @@ class UiGameListWidget(UiWidgetViewport):
 
         games_data, list_updated = self.ldb.get_games()
         viewport_height = (int((len(games_data) - 1) / self.max_games_cols) + 1) * (
-                GAME_WIDGET_HEIGHT + GAME_BORDER_HEIGHT)
+                GAME_WIDGET_HEIGHT + GAME_DISTANCE_HEIGHT)
         if viewport_height < visible_height:
             viewport_height = visible_height
         viewport_width = visible_width
-        if viewport_width < GAME_WIDGET_HEIGHT + GAME_BORDER_HEIGHT:
-            viewport_width = GAME_WIDGET_HEIGHT + GAME_BORDER_HEIGHT
+        if viewport_width < GAME_WIDGET_HEIGHT + GAME_DISTANCE_HEIGHT:
+            viewport_width = GAME_WIDGET_HEIGHT + GAME_DISTANCE_HEIGHT
 
         self.set_viewport_size(viewport_width, viewport_height)
 
@@ -130,6 +138,7 @@ class UiGameListWidget(UiWidgetViewport):
             for idx, game_data in enumerate(games_data):
                 pos_x, pos_y = self.get_game_position(idx + 1)
                 self.game_widgets.append(UiGameWidget(self, game_data, pos_x=pos_x, pos_y=pos_y))
+            self.select_game("TOP")
         elif update_widgets is True or list_updated is True:
             for idx, game_data in enumerate(games_data):
                 pos_x, pos_y = self.get_game_position(idx + 1)
@@ -164,10 +173,14 @@ class UiGameListWidget(UiWidgetViewport):
                     break
 
         match command:
+            case "TOP":
+                selected_game_index = 0
             case "UP":
                 selected_game_index = selected_game_index - self.max_games_cols
             case "DOWN":
                 selected_game_index = selected_game_index + self.max_games_cols
+            case "BOTTOM":
+                selected_game_index = len(self.game_widgets) - 1
             case "LEFT":
                 selected_game_index = selected_game_index - 1
             case "RIGHT":

@@ -5,9 +5,9 @@
 [game_widget]
 # width. The height is calculated based on width
 width = 240
-# widget border sizes
-border_width = 10
-border_height = 10
+# widget grid distance sizes
+distance_width = 10
+distance_height = 10
 # Label height in bottom of the widget
 label_height = 65
 

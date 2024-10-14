@@ -5,19 +5,19 @@ from uiwidgets import UiWidget
 
 
 class UiApp(UiWidget):
-    def __init__(self, **kwargs):
+    def __init__(self, size_w: float = 0, size_h: float = 0, fullscreen: bool = False, noframe: bool = False, **kwargs):
         super().__init__(parent=None, **kwargs)
         self.is_interactive = True
         self.is_focus = True
         self._detached_surface = None
         self._detached_surface_changed = None
-        self.size_w = 0
-        self.size_h = 0
-        self.fullscreen = False
-        self.noframe = False
+        self.size_w = size_w
+        self.size_h = size_h
+        self.fullscreen = fullscreen
+        self.noframe = noframe
         self.init_display_settings()
 
-    def init_display_settings(self):
+    def init_display_settings(self, reset: bool = False) -> None:
         pygame.init()
         if self.fullscreen is True:
             flags = pygame.RESIZABLE + pygame.FULLSCREEN
@@ -27,7 +27,9 @@ class UiApp(UiWidget):
                 flags = pygame.RESIZABLE + pygame.NOFRAME
             else:
                 flags = pygame.RESIZABLE
-            if self.size_w == 0 or self.size_w == 0:
+            if self._detached_surface is not None and reset is False:
+                self.size_w, self.size_h = self._detached_surface.get_size()
+            if self.size_w == 0 or self.size_w == 0 or reset is True:
                 display_info = pygame.display.Info()
                 if self.size_w == 0:
                     self.size_w = display_info.current_w

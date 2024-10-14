@@ -15,7 +15,7 @@ class UiWidgetStatic(UiWidget):
             self.set_changed()
         elif self._widget_surface.get_width() != w or \
                 self._widget_surface.get_height() != h:
-            transform.scale(self._widget_surface, (w, h))
+            self._widget_surface = transform.scale(self._widget_surface, (w, h))
             self.set_changed()
         return self._widget_surface
 
@@ -33,13 +33,15 @@ class UiWidgetStatic(UiWidget):
         if draw_to_parent is True and (self.is_changed() is True or self.is_parent_changed()):
             if self.compose_to_parent(parent_surface, rect) is not False:
                 self.parent_widget.set_child_changed()
+            if self.compose_borders(parent_surface) is not False:
+                self.parent_widget.set_child_changed()
 
         if self.is_changed() is True:
             if self.bg_color is not None:
                 surface.fill(self.bg_color)
             self.compose(surface)
 
-        if self._child_changed is True or self.is_changed() is True:
+        if self.widgets is not None and (self._child_changed is True or self.is_changed() is True):
             for widget in self.widgets:
                 widget.draw(force)
 

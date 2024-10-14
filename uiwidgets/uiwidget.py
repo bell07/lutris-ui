@@ -2,13 +2,13 @@
 from __future__ import annotations
 
 from pygame import Surface, Rect, Color
-from pygame import constants
+from pygame import constants, draw
 
 from uiwidgets import DynamicRect
 
 
 class UiWidget:
-    def __init__(self, parent: UiWidget = None, bg_color: Color = None, **kwargs):
+    def __init__(self, parent: UiWidget = None, bg_color: Color = None, border_color: Color = None, **kwargs):
         self.parent_widget = None
         self._parent_surface = None
         self._dyn_rect = DynamicRect(**kwargs)
@@ -19,9 +19,10 @@ class UiWidget:
         self.is_interactive = True
         self.is_focus = False
 
-        self.widgets = []
+        self.widgets = None
         self.focus_child = None
         self.bg_color = bg_color
+        self.border_color = border_color
 
         parent and self.set_parent_surface(parent)
 
@@ -52,6 +53,12 @@ class UiWidget:
     def set_size(self, **kwargs) -> None:
         self._dyn_rect.set_size(**kwargs)
 
+    def set_border(self, border_color: Color = None, **kwargs) -> None:
+        self._dyn_rect.set_border(**kwargs)
+        if border_color is not None:
+            self.border_color = border_color
+        self.set_changed()
+
     def get_surface(self) -> Surface:
         parent_surface = self.get_parent_surface()
         rect = self.get_rect()
@@ -62,6 +69,15 @@ class UiWidget:
 
     def compose_to_parent(self, surface: Surface, rect: Rect) -> bool:
         return False
+
+    def compose_borders(self, surface: Surface) -> bool:
+        if self.border_color is None:
+            return False
+        draw.rect(surface=surface, color=self.border_color, rect=self._dyn_rect.get_border("top"))
+        draw.rect(surface=surface, color=self.border_color, rect=self._dyn_rect.get_border("bottom"))
+        draw.rect(surface=surface, color=self.border_color, rect=self._dyn_rect.get_border("left"))
+        draw.rect(surface=surface, color=self.border_color, rect=self._dyn_rect.get_border("right"))
+        return True
 
     def is_changed(self) -> bool:
         return self._is_changed
@@ -120,7 +136,10 @@ class UiWidget:
 
         updated = False
         if self.is_changed() is True or self.is_parent_changed():
-            if self.compose_to_parent(self.get_parent_surface(), self.get_rect()) is not False:
+            parent_surface = self.get_parent_surface()
+            if self.compose_to_parent(parent_surface, self.get_rect()) is not False:
+                self.set_changed()
+            if self.compose_borders(parent_surface) is not False:
                 self.set_changed()
 
             surface = self.get_surface()
@@ -130,7 +149,7 @@ class UiWidget:
             if self.compose(surface) is not False:
                 self.set_changed()
 
-        if self._child_changed is True or self.is_changed() is True:
+        if self.widgets is not None and (self._child_changed is True or self.is_changed()):
             for widget in self.widgets:
                 widget.draw(force)
             updated = True
@@ -140,10 +159,14 @@ class UiWidget:
 
     def add_child(self, widget: UiWidget) -> None:
         widget.parent_widget = self
+        if self.widgets is None:
+            self.widgets = []
         self.widgets.append(widget)
 
     def remove_child(self, widget: UiWidget) -> None:
         self.widgets.remove(widget)
+        if len(self.widgets) == 0:
+            self.widgets = None
 
     def get_widget_collide_point(self, widget: UiWidget, pos: (int, int)) -> (int, int):
         widget_rect = widget.get_rect()
@@ -151,6 +174,9 @@ class UiWidget:
             return pos[0] - widget_rect.x, pos[1] - widget_rect.y
 
     def get_child_by_pos(self, pos: (int, int)) -> (UiWidget, (int, int)):
+        if self.widgets is None:
+            return None, None
+
         for widget in reversed(self.widgets):
             if widget.is_visible is False:
                 continue
@@ -177,5 +203,7 @@ class UiWidget:
                 self.focus_child.process_events(events)
 
     def process_tick(self, milliseconds: float) -> None:
+        if self.widgets is None:
+            return
         for widget in self.widgets:
             widget.process_tick(milliseconds)

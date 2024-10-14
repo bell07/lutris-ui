@@ -20,6 +20,8 @@ class LutrisDb:
         self.launch_pid = None
         self.pid_list = []
         self.last_seen = 0
+        self.last_pid_count = 0
+        self.terminate_in_proces = False
 
     def get_games(self) -> tuple[list, bool]:
         if self.data_changed is False:
@@ -54,6 +56,9 @@ class LutrisDb:
         self.launch_pid = p.pid
         self.pid_list = [p.pid]
         self.wrapper_pid = None
+        self.last_seen = 0
+        self.last_pid_count = 0
+        self.terminate_in_proces = False
 
     def check_is_running(self) -> bool:
         if self.wrapper_pid is None:
@@ -91,20 +96,31 @@ class LutrisDb:
                 continue
 
         if len(self.pid_list) == 0:  # All processes killed
-            self.last_seen = self.last_seen + 1
-            if self.last_seen >= 6:  # Wait 6 times. Each step is ~ 300 msps
-                print("Lutris session closed")
-                return False
+            if self.terminate_in_proces is False:
+                self.last_seen = self.last_seen + 1
+                if self.last_seen <= 6:  # Wait 6 times. Each step is ~ 300 msps
+                    return True
+            print("Lutris session closed")
+            return False
         else:
             self.last_seen = 0
         return True
 
     def kill_running(self) -> None:
-        for pid in reversed(self.pid_list):
-            if pid == self.wrapper_pid or pid == self.launch_pid:  # Do not kill wrapper if other processes are killed
-                return
+        self.terminate_in_proces = True
+        if self.last_pid_count == 0:
+            self.last_pid_count = len(self.pid_list)
+        completed_count = self.last_pid_count - len(self.pid_list)
+        self.last_pid_count = len(self.pid_list)
+        if completed_count > 0 or len(self.pid_list) == 0:
+            return
+
+        for idx in range(1, -completed_count, -1):
             try:
+                pid = self.pid_list[idx]
                 os.kill(pid, signal.SIGTERM)
+            except IndexError:
+                return
             except ProcessLookupError:
                 continue
             print(f"PID {pid} killed")

@@ -147,6 +147,7 @@ class UiWidgetViewport(UiWidgetStatic):
             if draw_to_parent is True:
                 visible_surface = self.get_visible_surface()
                 parent_surface = self.get_parent_surface()
+                self.compose_borders(parent_surface)
                 parent_surface.blit(visible_surface, widget_rect.topleft)
         if draw_to_parent is True:
             self.unset_changed()
