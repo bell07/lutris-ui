@@ -1,12 +1,13 @@
 import pygame
 
-from controls import COMMAND_EVENT
-from uiwidgets import UiWidget
+from uiwidgets import UiWidget, Controls
 
 
 class UiApp(UiWidget):
-    def __init__(self, size_w: float = 0, size_h: float = 0, fullscreen: bool = False, noframe: bool = False, **kwargs):
+    def __init__(self, controls: Controls, size_w: float = 0, size_h: float = 0,
+                 fullscreen: bool = False, noframe: bool = False, **kwargs):
         super().__init__(parent=None, **kwargs)
+        self.controls = controls
         self.is_interactive = True
         self.is_focus = True
         self._detached_surface = None
@@ -47,11 +48,6 @@ class UiApp(UiWidget):
         self._dyn_rect.set_parent_size_by_surface(self._detached_surface)
         self.set_changed()
 
-    def save_display_settings(self):
-        flags = self._detached_surface.get_flags()
-        size = self._detached_surface.get_size()
-        self.screen_data = (size, flags)
-
     def get_parent_surface(self) -> pygame.Surface:
         return self._detached_surface
 
@@ -74,7 +70,7 @@ class UiApp(UiWidget):
             if e.type in (pygame.WINDOWSIZECHANGED, pygame.WINDOWRESTORED):
                 self.set_changed()
                 return True
-            elif e.type == pygame.QUIT or (e.type == COMMAND_EVENT and e.command == "EXIT"):
+            elif e.type == pygame.QUIT or (e.type == Controls.COMMAND_EVENT and e.command == "EXIT"):
                 return False
             elif pos is None and e.type in (pygame.MOUSEMOTION, pygame.MOUSEBUTTONUP, pygame.MOUSEBUTTONDOWN):
                 pos = tuple(e.pos)
@@ -87,3 +83,14 @@ class UiApp(UiWidget):
 
     def set_focus(self, focus: bool = True) -> None:
         return
+
+    def run(self):
+        while True:
+            self.controls.update_controls()
+            if self.process_tick(self.controls.get_tick_time()) is False:
+                break
+            if self.process_events(self.controls.events) is False:
+                break
+            self.draw()
+            self.controls.game_tick()
+        pygame.quit()

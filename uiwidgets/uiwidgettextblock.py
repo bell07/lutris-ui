@@ -1,22 +1,21 @@
-import pygame
+from pygame import Color, font, Surface
 
 from uiwidgets import UiWidgetStatic, UiWidget
 
 
 class UiWidgetTextBlock(UiWidgetStatic):
-
-    def __init__(self, parent: UiWidget, text: str = None, text_color: pygame.Color = None,
-                 text_font: pygame.font.Font = None,
+    def __init__(self, parent: UiWidget, text: str = None, text_color: Color = None,
+                 text_font: font.Font = None,
                  text_centered_x: bool = False, text_centered_y: bool = False,
                  **kwargs):
         super().__init__(parent, **kwargs)
         self.text = text or ""
-        self.text_color = text_color or pygame.Color('black')
-        self.text_font = text_font or pygame.font.SysFont(None, 30)
+        self.text_color = text_color or Color('black')
+        self.text_font = text_font or font.SysFont(None, 30)
         self.text_centered_x = text_centered_x
         self.text_centered_y = text_centered_y
 
-    def compose(self, surface: pygame.Surface) -> None:
+    def compose(self, surface: Surface) -> None:
         words = [word.split(' ') for word in self.text.splitlines()]  # 2D array where each row is a list of words.
         space = self.text_font.size(' ')[0]  # The width of a space.
         (surface_max_width, surface_max_height) = surface.get_size()

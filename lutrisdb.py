@@ -111,16 +111,18 @@ class LutrisDb:
         if self.last_pid_count == 0:
             self.last_pid_count = len(self.pid_list)
         completed_count = self.last_pid_count - len(self.pid_list)
-        self.last_pid_count = len(self.pid_list)
-        if completed_count > 0 or len(self.pid_list) == 0:
+        current_count = len(self.pid_list)
+        if completed_count > 0 or current_count == 0:
+            self.last_pid_count = current_count
             return
 
-        for idx in range(1, -completed_count, -1):
+        for idx in range(len(self.pid_list) - 1, self.last_pid_count - 2, -1):
             try:
                 pid = self.pid_list[idx]
                 os.kill(pid, signal.SIGTERM)
             except IndexError:
-                return
+                break
             except ProcessLookupError:
                 continue
             print(f"PID {pid} killed")
+        self.last_pid_count = current_count

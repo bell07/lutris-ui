@@ -4,13 +4,13 @@ import pygame
 
 from lutrisdb import LutrisDb
 from settings import Settings
-from uigamelist import UiGameListWidget, GAME_WIDGET_WIDTH, GAME_WIDGET_HEIGHT
+from uigamelist import UiGameListWidget
 from uirunninggame import UiGameIsRunningWidget
-from uiwidgets import DynamicTypes, UiApp
+from uiwidgets import UiApp, Controls
 
 
 class LutrisUiApp(UiApp):
-    def __init__(self):
+    def __init__(self, controls: Controls):
         self.settings = Settings("window")
 
         if "--fullscreen" in sys.argv or "-f" in sys.argv:
@@ -25,13 +25,11 @@ class LutrisUiApp(UiApp):
 
         size_w = self.settings.get("size_w", 0)
         size_h = self.settings.get("size_h", 0)
-        super().__init__(size_w=size_w, size_h=size_h, fullscreen=fullscreen, noframe=noframe)
+        super().__init__(controls=controls, size_w=size_w, size_h=size_h, fullscreen=fullscreen, noframe=noframe)
         pygame.display.set_caption("Lutris-UI")
         ldb = LutrisDb()
         self.games_viewport = UiGameListWidget(self, ldb, border_all=10, border_color="Grey")
-        self.game_is_running = UiGameIsRunningWidget(self, ldb, pos_x_type=DynamicTypes.TYPE_CENTER,
-                                                     pos_y_type=DynamicTypes.TYPE_CENTER,
-                                                     size_w=GAME_WIDGET_WIDTH, size_h=GAME_WIDGET_HEIGHT + 60)
+        self.game_is_running = UiGameIsRunningWidget(self, ldb, border_all=10, border_color="Grey")
 
     def process_events(self, events: list, pos: (int, int) = None) -> bool:
         for e in events:

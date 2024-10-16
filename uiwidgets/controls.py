@@ -2,22 +2,17 @@ import pygame
 
 from settings import Settings
 
-REPEATABLE = ("UP", "DOWN", "LEFT", "RIGHT")
-
-KBD_MAP = {pygame.K_UP: "UP", pygame.K_DOWN: "DOWN", pygame.K_LEFT: "LEFT", pygame.K_RIGHT: "RIGHT",
-           pygame.K_RETURN: "ENTER", pygame.K_ESCAPE: "EXIT", pygame.K_r: "RELOAD"}
-
-JOY_MAP = {pygame.CONTROLLER_BUTTON_A: "ENTER", pygame.CONTROLLER_BUTTON_START: "ENTER",
-           pygame.CONTROLLER_BUTTON_DPAD_UP: "UP", pygame.CONTROLLER_BUTTON_DPAD_DOWN: "DOWN",
-           pygame.CONTROLLER_BUTTON_DPAD_LEFT: "LEFT", pygame.CONTROLLER_BUTTON_DPAD_RIGHT: "RIGHT"}
-
-COMMAND_EVENT = pygame.USEREVENT + 1
-
 
 # UI Controls proxy
 class Controls:
-    def __init__(self):
+    COMMAND_EVENT = pygame.event.custom_type()
+
+    def __init__(self, repeatable_commands: tuple = None, keyboard_commands: dict = None,
+                 joypad_keys_commands: dict = None):
         self.events = None
+        self.repeatable_commands = repeatable_commands or {}
+        self.keyboard_commands = keyboard_commands or []
+        self.joypad_keys_commands = joypad_keys_commands or []
         settings = Settings("input")
         self.repeat_time_1 = settings.get("repeat_time_1", 500)  # ms
         self.repeat_time_2 = settings.get("repeat_time_2", 200)  # ms
@@ -81,7 +76,8 @@ class Controls:
         # Check for timer 2
         if self._timer2 is None:
             self._timer2 = 0
-            return pygame.event.Event(COMMAND_EVENT, {"command": self._pressed_command, "origin": self._pressed_event})
+            return pygame.event.Event(Controls.COMMAND_EVENT,
+                                      {"command": self._pressed_command, "origin": self._pressed_event})
         else:
             self._timer2 = self._timer2 + self._clock.get_time()
 
@@ -90,7 +86,8 @@ class Controls:
             return None
 
         self._timer2 = self._timer2 % self.repeat_time_2
-        return pygame.event.Event(COMMAND_EVENT, {"command": self._pressed_command, "origin": self._pressed_event})
+        return pygame.event.Event(Controls.COMMAND_EVENT,
+                                  {"command": self._pressed_command, "origin": self._pressed_event})
 
     @staticmethod
     def _dir_to_code(vector: (float, float)) -> str:
@@ -106,18 +103,18 @@ class Controls:
             return "DOWN"
 
     def _append_custom_event(self, command: str, event: pygame.event.Event, events: list):
-        if command in REPEATABLE:
+        if command in self.repeatable_commands:
             if self._press(command, event) is True:
-                events.append(pygame.event.Event(COMMAND_EVENT, {"command": command, "origin": event}))
+                events.append(pygame.event.Event(Controls.COMMAND_EVENT, {"command": command, "origin": event}))
         else:
-            events.append(pygame.event.Event(COMMAND_EVENT, {"command": command, "origin": event}))
+            events.append(pygame.event.Event(Controls.COMMAND_EVENT, {"command": command, "origin": event}))
 
     def _apply_custom_events(self, events: list) -> list:
         mapped_events = []
         for e in events:
             match e.type:
                 case pygame.KEYDOWN:
-                    code = KBD_MAP.get(e.key)
+                    code = self.keyboard_commands.get(e.key)
                     if code is not None and e.mod == pygame.KMOD_NONE:
                         self._append_custom_event(code, e, mapped_events)
                     else:
@@ -126,7 +123,7 @@ class Controls:
                     self._release(e)
 
                 case pygame.JOYBUTTONDOWN:
-                    code = JOY_MAP.get(e.button)
+                    code = self.joypad_keys_commands.get(e.button)
                     if code is not None:
                         self._append_custom_event(code, e, mapped_events)
                     else:

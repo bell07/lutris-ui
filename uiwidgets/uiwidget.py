@@ -1,8 +1,7 @@
 # import pygame
 from __future__ import annotations
 
-from pygame import Surface, Rect, Color
-from pygame import constants, draw
+from pygame import Surface, Rect, Color, constants, draw
 
 from uiwidgets import DynamicRect
 
@@ -29,23 +28,26 @@ class UiWidget:
     def set_parent_surface(self, parent: UiWidget) -> None:
         self.parent_widget = parent
         parent.add_child(self)
-        self._dyn_rect.set_parent_size_by_surface(parent.get_surface())
+        self._dyn_rect.set_parent_size_by_surface(parent.get_surface_for_childs())
         self._parent_surface = None
 
     def get_parent_surface(self) -> Surface:
         if self._parent_surface is None or self.is_parent_changed() is True:
-            self._parent_surface = self.parent_widget.get_surface()
+            self._parent_surface = self.parent_widget.get_surface_for_childs()
         return self._parent_surface
 
     def get_parent_size(self) -> (int, int):
-        return self.parent_widget.get_size()
+        return self.parent_widget.get_size_for_childs()
 
-    def get_rect(self) -> Rect:
+    def get_rect(self, with_borders: bool = False) -> Rect:
         self._dyn_rect.set_parent_size(*self.get_parent_size())
-        return self._dyn_rect.get_rect()
+        return self._dyn_rect.get_rect(with_borders)
 
-    def get_size(self) -> (int, int):
-        return self.get_rect().size
+    def get_size(self, with_borders: bool = True) -> (int, int):
+        return self.get_rect(with_borders).size
+
+    def get_size_for_childs(self) -> (int, int):
+        return self.get_size(with_borders=False)
 
     def set_pos(self, **kwargs) -> None:
         self._dyn_rect.set_pos(**kwargs)
@@ -59,31 +61,51 @@ class UiWidget:
             self.border_color = border_color
         self.set_changed()
 
-    def get_surface(self) -> Surface:
+    def get_surface(self, with_borders: bool = False) -> Surface:
         parent_surface = self.get_parent_surface()
-        rect = self.get_rect()
+        rect = self.get_rect(with_borders)
         return parent_surface.subsurface(rect)
+
+    def get_surface_for_childs(self) -> Surface:
+        return self.get_surface(with_borders=False)
 
     def compose(self, surface: Surface) -> bool:
         return False
 
-    def compose_to_parent(self, surface: Surface, rect: Rect) -> bool:
+    def compose_to_parent(self, surface: Surface) -> bool:
         return False
 
-    def compose_borders(self, surface: Surface) -> bool:
+    def compose_borders(self) -> bool:
         if self.border_color is None:
             return False
-        draw.rect(surface=surface, color=self.border_color, rect=self._dyn_rect.get_border("top"))
-        draw.rect(surface=surface, color=self.border_color, rect=self._dyn_rect.get_border("bottom"))
-        draw.rect(surface=surface, color=self.border_color, rect=self._dyn_rect.get_border("left"))
-        draw.rect(surface=surface, color=self.border_color, rect=self._dyn_rect.get_border("right"))
-        return True
+        surface = self.get_surface(with_borders=True)
+        width, height = surface.get_size()
+
+        drawn = False
+        if self._dyn_rect.border_top > 0:
+            draw.rect(surface=surface, color=self.border_color, rect=Rect(0, 0, width, self._dyn_rect.border_top))
+            drawn = True
+
+        if self._dyn_rect.border_left > 0:
+            draw.rect(surface=surface, color=self.border_color, rect=Rect(0, 0, self._dyn_rect.border_left, height))
+            drawn = True
+
+        if self._dyn_rect.border_right > 0:
+            draw.rect(surface=surface, color=self.border_color,
+                      rect=Rect(width - self._dyn_rect.border_right, 0, self._dyn_rect.border_right, height))
+            drawn = True
+
+        if self._dyn_rect.border_bottom > 0:
+            draw.rect(surface=surface, color=self.border_color,
+                      rect=Rect(0, height - self._dyn_rect.border_bottom, width, self._dyn_rect.border_bottom))
+            drawn = True
+        return drawn
 
     def is_changed(self) -> bool:
         return self._is_changed
 
     def is_parent_changed(self) -> bool:
-        return self.parent_widget.is_changed()
+        return self.parent_widget.is_changed() or self.parent_widget.is_parent_changed()
 
     def set_changed(self) -> None:
         self._is_changed = True
@@ -136,25 +158,26 @@ class UiWidget:
 
         updated = False
         if self.is_changed() is True or self.is_parent_changed():
-            parent_surface = self.get_parent_surface()
-            if self.compose_to_parent(parent_surface, self.get_rect()) is not False:
-                self.set_changed()
-            if self.compose_borders(parent_surface) is not False:
-                self.set_changed()
-
-            surface = self.get_surface()
             if self.bg_color is not None:
-                surface.fill(self.bg_color)
+                self.get_surface_for_childs().fill(self.bg_color)
                 self.set_changed()
-            if self.compose(surface) is not False:
+            if self.compose(self.get_surface_for_childs()) is not False:
+                self.set_changed()
+            if self.compose_borders() is not False:
                 self.set_changed()
 
-        if self.widgets is not None and (self._child_changed is True or self.is_changed()):
+        if self.widgets is not None and (self._child_changed is True or self.is_changed() or self.is_parent_changed()):
             for widget in self.widgets:
                 widget.draw(force)
             updated = True
 
-        self.unset_changed()
+        if self.is_changed() is True or self.is_parent_changed():
+            self.compose_to_parent(self.get_parent_surface())
+            updated = True
+
+        if updated is True:
+            self.unset_changed()
+
         return updated
 
     def add_child(self, widget: UiWidget) -> None:
@@ -164,12 +187,13 @@ class UiWidget:
         self.widgets.append(widget)
 
     def remove_child(self, widget: UiWidget) -> None:
+        widget.set_interactive(False)
         self.widgets.remove(widget)
         if len(self.widgets) == 0:
             self.widgets = None
 
     def get_widget_collide_point(self, widget: UiWidget, pos: (int, int)) -> (int, int):
-        widget_rect = widget.get_rect()
+        widget_rect = widget.get_rect(with_borders=True)
         if widget_rect.collidepoint(pos):
             return pos[0] - widget_rect.x, pos[1] - widget_rect.y
 

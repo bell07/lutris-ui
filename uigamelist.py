@@ -1,6 +1,5 @@
 import pygame
 
-import controls
 from lutrisdb import LutrisDb
 from settings import Settings
 from uiwidgets import *
@@ -13,23 +12,21 @@ GAME_DISTANCE_HEIGHT = game_list_settings.get("distance_height", 10)
 TEXT_AREA_HEIGHT = game_list_settings.get("label_height", 65)
 
 
-class UiGameLabel(UiWidgetTextBlock):
-    def compose(self, surface: pygame.Surface) -> None:
-        surface.set_alpha(128)
-        super().compose(surface)
-
-
 class UiGameWidget(UiWidgetStatic):
-    def __init__(self, parent: UiWidget, game_data: dict, **kwargs):
+    def __init__(self, parent: UiWidget, game_data: dict = None, **kwargs):
         super().__init__(parent, **kwargs)
         self.set_size(size_w=GAME_WIDGET_WIDTH, size_h=GAME_WIDGET_HEIGHT)
-        self.set_border(border_all=10, border_color="White")
-        self.name = game_data["name"]
-        self.data = game_data
-        self.label_widget = UiGameLabel(parent=self, bg_color=pygame.Color(255, 255, 255),
-                                        text_centered_x=True, text_centered_y=True,
-                                        pos_x_type=DynamicTypes.TYPE_CENTER, pos_y=-0.1,
-                                        size_h=TEXT_AREA_HEIGHT)
+        self.set_border(border_all=10, border_color=pygame.Color("White"))
+        if game_data is None:
+            self.name = None
+            self.data = None
+        else:
+            self.name = game_data["name"]
+            self.data = game_data
+        self.label_widget = UiWidgetTextBlock(parent=self, bg_color=pygame.Color(255, 255, 255), alpha=128,
+                                              text_centered_x=True, text_centered_y=True,
+                                              pos_x_type=DynamicTypes.TYPE_CENTER, pos_y=-0.1,
+                                              size_h=TEXT_AREA_HEIGHT)
 
     def compose(self, surface: pygame.Surface) -> None:
         max_w = surface.get_width()
@@ -90,7 +87,7 @@ class UiGameWidget(UiWidgetStatic):
         if focus is True:
             self.set_border(border_color=pygame.Color(128, 128, 255), border_all=5)
         else:
-            self.set_border(border_color="White", border_all=10)
+            self.set_border(border_color=pygame.Color("White"), border_all=10)
         self.set_changed()
 
 
@@ -111,7 +108,7 @@ class UiGameListWidget(UiWidgetViewport):
         return pos_x, pos_y
 
     def update_games_list(self, force: bool = False) -> None:
-        (visible_width, visible_height) = self.get_rect().size
+        (visible_width, visible_height) = self.get_rect(with_borders=False).size
         new_max_games_cols = int(visible_width / (GAME_WIDGET_WIDTH + GAME_DISTANCE_WIDTH))
         if new_max_games_cols == 0:
             new_max_games_cols = 1
@@ -203,8 +200,8 @@ class UiGameListWidget(UiWidgetViewport):
         selected_widget = self.game_widgets[selected_game_index]
         selected_widget.set_focus()
 
-        viewport_h = self.get_rect().height
-        widget_rect = selected_widget.get_rect()
+        viewport_h = self.get_rect(with_borders=False).height
+        widget_rect = selected_widget.get_rect(with_borders=True)
         if widget_rect.y < self.shift_y:
             self.shift_y = widget_rect.y
 
@@ -217,15 +214,15 @@ class UiGameListWidget(UiWidgetViewport):
         # Scroll after other events processed
         for e in events:
             match e.type:
-                case controls.COMMAND_EVENT:
+                case Controls.COMMAND_EVENT:
                     self.select_game(e.command)
                 case pygame.MOUSEWHEEL:
                     self.shift_y = self.shift_y - (e.y * GAME_WIDGET_HEIGHT / 4)
                     self.set_changed()
 
-    def draw(self, force: bool = False, draw_to_parent: bool = True) -> bool:
+    def draw(self, force: bool = False) -> bool:
         if force is True:
             self.set_changed()
         if self.is_changed() or self.is_parent_changed():
             self.update_games_list(force)
-        return super().draw(force, draw_to_parent)
+        return super().draw(force)
