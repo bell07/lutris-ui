@@ -27,25 +27,29 @@ class LutrisUiApp(UiApp):
         size_h = self.settings.get("size_h", 0)
         super().__init__(controls=controls, size_w=size_w, size_h=size_h, fullscreen=fullscreen, noframe=noframe)
         pygame.display.set_caption("Lutris-UI")
-        ldb = LutrisDb()
-        self.games_viewport = UiGameListWidget(self, ldb, border_all=10, border_color="Grey")
-        self.game_is_running = UiGameIsRunningWidget(self, ldb, border_all=10, border_color="Grey")
+        self.ldb = LutrisDb()
+        self.games_viewport = UiGameListWidget(self, border_all=10, border_color="Grey")
+        self.game_is_running = UiGameIsRunningWidget(self, border_all=10, border_color="Grey")
 
-    def process_events(self, events: list, pos: (int, int) = None) -> bool:
+    def process_events(self, events: list, pos: (int, int) = None) -> None:
         for e in events:
             if e.type == pygame.KEYDOWN and e.key == pygame.K_RETURN and e.mod == pygame.KMOD_LALT:
                 self.fullscreen = not self.fullscreen
                 self.init_display_settings(reset=True)
-                return True
+                return
             if e.type == pygame.KEYDOWN and e.key == pygame.K_RETURN and e.mod == pygame.KMOD_RALT:
                 self.noframe = not self.noframe
                 self.fullscreen = False
                 self.init_display_settings(reset=True)
-                return True
+                return
             if e.type == pygame.KEYDOWN and e.key == pygame.K_UP and e.mod == pygame.KMOD_LALT:
                 self.init_display_settings()
             if e.type == pygame.KEYDOWN and e.key == pygame.K_DOWN and e.mod == pygame.KMOD_LALT:
                 pygame.display.iconify()
-                return True
+                return
+        super().process_events(events, pos)
 
-        return super().process_events(events, pos)
+    def launch(self, game_data) -> None:
+        self.ldb.launch(game_data)
+        self.games_viewport.set_interactive(False)
+        self.game_is_running.set_running(game_data)

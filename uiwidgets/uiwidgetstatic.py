@@ -39,12 +39,10 @@ class UiWidgetStatic(UiWidget):
         self.alpha = alpha
         self.get_surface(with_borders=True).set_alpha(alpha)
 
-    def draw(self, force: bool = False) -> bool:
+    def draw(self) -> None:
+        self.updated = False
         if self.is_visible is False:
-            return False
-
-        if force is True:
-            self.set_changed()
+            return
 
         if self.is_changed() is True:
             if self.bg_color is not None:
@@ -54,19 +52,14 @@ class UiWidgetStatic(UiWidget):
 
         if self.widgets is not None and (self._child_changed is True or self.is_changed() is True):
             for widget in self.widgets:
-                widget.draw(force)
+                widget.draw()
+                if widget.updated is True:
+                    self.updated = True
 
-        updated = False
         parent_surface = self.get_parent_surface()
         if self._child_changed is True or self.is_parent_changed() is True or self.is_changed() is True:
             parent_surface.blit(self.get_surface(with_borders=True), self.get_rect(with_borders=True))
-            updated = True
+            self.updated = True
 
-        if self.is_changed() is True or self.is_parent_changed():
-            self.compose_to_parent(parent_surface)
-            updated = True
-
-        if updated is True:
+        if self.updated is True:
             self.unset_changed()
-
-        return updated

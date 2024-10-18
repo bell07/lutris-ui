@@ -13,6 +13,7 @@ class UiWidget:
         self._dyn_rect = DynamicRect(**kwargs)
         self._is_changed = True
         self._child_changed = True
+        self.updated = False
 
         self.is_visible = True
         self.is_interactive = True
@@ -28,16 +29,22 @@ class UiWidget:
     def set_parent_surface(self, parent: UiWidget) -> None:
         self.parent_widget = parent
         parent.add_child(self)
-        self._dyn_rect.set_parent_size_by_surface(parent.get_surface_for_childs())
+        self._dyn_rect.set_parent_size_by_surface(parent.get_surface(with_borders=False))
         self._parent_surface = None
 
     def get_parent_surface(self) -> Surface:
         if self._parent_surface is None or self.is_parent_changed() is True:
-            self._parent_surface = self.parent_widget.get_surface_for_childs()
+            self._parent_surface = self.parent_widget.get_surface(with_borders=False)
         return self._parent_surface
 
+    def get_root_widget(self):  # -> No annotation because root type "unknown/custom"
+        if self.parent_widget is not None:
+            return self.parent_widget.get_root_widget()
+        else:
+            return self
+
     def get_parent_size(self) -> (int, int):
-        return self.parent_widget.get_size_for_childs()
+        return self.parent_widget.get_size(with_borders=False)
 
     def get_rect(self, with_borders: bool = False) -> Rect:
         self._dyn_rect.set_parent_size(*self.get_parent_size())
@@ -45,9 +52,6 @@ class UiWidget:
 
     def get_size(self, with_borders: bool = True) -> (int, int):
         return self.get_rect(with_borders).size
-
-    def get_size_for_childs(self) -> (int, int):
-        return self.get_size(with_borders=False)
 
     def set_pos(self, **kwargs) -> None:
         self._dyn_rect.set_pos(**kwargs)
@@ -66,13 +70,7 @@ class UiWidget:
         rect = self.get_rect(with_borders)
         return parent_surface.subsurface(rect)
 
-    def get_surface_for_childs(self) -> Surface:
-        return self.get_surface(with_borders=False)
-
     def compose(self, surface: Surface) -> bool:
-        return False
-
-    def compose_to_parent(self, surface: Surface) -> bool:
         return False
 
     def compose_borders(self) -> bool:
@@ -104,8 +102,21 @@ class UiWidget:
     def is_changed(self) -> bool:
         return self._is_changed
 
+    def is_child_changed(self) -> bool:
+        return self._child_changed
+
     def is_parent_changed(self) -> bool:
-        return self.parent_widget.is_changed() or self.parent_widget.is_parent_changed()
+        parent_changed = self.parent_widget.is_changed() or self.parent_widget.is_parent_changed()
+        if parent_changed is True:
+            return parent_changed
+
+        own_idx = self.parent_widget.widgets.index(self)
+        for idx in range(0, own_idx):
+            under_widget = self.parent_widget.widgets[idx]
+            if under_widget.is_visible is True and under_widget.updated is True:
+                if self.get_rect(with_borders=True).colliderect(under_widget.get_rect(with_borders=True)):
+                    return True
+        return False
 
     def set_changed(self) -> None:
         self._is_changed = True
@@ -124,6 +135,9 @@ class UiWidget:
         self._child_changed = False
 
     def set_focus(self, focus: bool = True) -> None:
+        if focus is True:
+            self.set_interactive(True)
+
         if self.is_focus != focus:
             if focus is True:
                 self.parent_widget.set_focus(True)
@@ -138,10 +152,10 @@ class UiWidget:
             self.set_changed()
 
     def set_interactive(self, interactive: bool = True) -> None:
-        self.is_interactive = interactive
-        if interactive is False:
-            self.set_focus(False)
-        self.set_changed()
+        if self.is_interactive != interactive:
+            self.is_interactive = interactive
+            if interactive is False:
+                self.set_focus(False)
 
     def set_visible(self, visible: bool = True) -> None:
         self.is_visible = visible
@@ -149,36 +163,29 @@ class UiWidget:
             self.set_focus(False)
         self.set_changed()
 
-    def draw(self, force: bool = False) -> bool:
+    def draw(self) -> None:
+        self.updated = False
         if self.is_visible is False:
-            return False
+            return
 
-        if force is True:
-            self.set_changed()
-
-        updated = False
         if self.is_changed() is True or self.is_parent_changed():
+            surface = self.get_surface(with_borders=False)
             if self.bg_color is not None:
-                self.get_surface_for_childs().fill(self.bg_color)
+                surface.fill(self.bg_color)
                 self.set_changed()
-            if self.compose(self.get_surface_for_childs()) is not False:
+            if self.compose(surface) is not False:
                 self.set_changed()
             if self.compose_borders() is not False:
                 self.set_changed()
 
         if self.widgets is not None and (self._child_changed is True or self.is_changed() or self.is_parent_changed()):
             for widget in self.widgets:
-                widget.draw(force)
-            updated = True
+                widget.draw()
+                if widget.updated is True:
+                    self.updated = True
 
-        if self.is_changed() is True or self.is_parent_changed():
-            self.compose_to_parent(self.get_parent_surface())
-            updated = True
-
-        if updated is True:
+        if self.updated is True:
             self.unset_changed()
-
-        return updated
 
     def add_child(self, widget: UiWidget) -> None:
         widget.parent_widget = self
@@ -195,6 +202,7 @@ class UiWidget:
     def get_widget_collide_point(self, widget: UiWidget, pos: (int, int)) -> (int, int):
         widget_rect = widget.get_rect(with_borders=True)
         if widget_rect.collidepoint(pos):
+            widget_rect = widget.get_rect(with_borders=False)
             return pos[0] - widget_rect.x, pos[1] - widget_rect.y
 
     def get_child_by_pos(self, pos: (int, int)) -> (UiWidget, (int, int)):

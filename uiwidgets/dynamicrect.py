@@ -171,8 +171,24 @@ class DynamicRect:
             y = self.parent_h - h
 
         self._rect_with_borders = Rect(x, y, w, h)
-        self._rect = Rect(x + self.border_left, y + self.border_top, w - self.border_left - self.border_right,
-                          h - self.border_top - self.border_bottom)
+
+        x = x + self.border_left
+        if x > max_w:
+            x = max_w
+
+        y = y + self.border_top
+        if y > max_h:
+            y = max_h
+
+        w = w - self.border_left - self.border_right
+        if w < 0:
+            w = 0
+
+        h = h - self.border_top - self.border_bottom
+        if h < 0:
+            h = 0
+
+        self._rect = Rect(x, y, w, h)
         self.changed = False
         if with_borders is True:
             return self._rect_with_borders

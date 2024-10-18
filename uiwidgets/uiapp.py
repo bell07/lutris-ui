@@ -17,6 +17,7 @@ class UiApp(UiWidget):
         self.fullscreen = fullscreen
         self.noframe = noframe
         self.init_display_settings()
+        self.exit_loop = False
 
     def init_display_settings(self, reset: bool = False) -> None:
         pygame.init()
@@ -65,21 +66,22 @@ class UiApp(UiWidget):
         super().unset_changed()
         self._detached_surface_changed = False
 
-    def process_events(self, events: list, pos: (int, int) = None) -> bool:
+    def process_events(self, events: list, pos: (int, int) = None) -> None:
         for e in events:
             if e.type in (pygame.WINDOWSIZECHANGED, pygame.WINDOWRESTORED):
                 self.set_changed()
-                return True
+                return
             elif e.type == pygame.QUIT or (e.type == Controls.COMMAND_EVENT and e.command == "EXIT"):
-                return False
+                self.exit_loop = True
+                return
             elif pos is None and e.type in (pygame.MOUSEMOTION, pygame.MOUSEBUTTONUP, pygame.MOUSEBUTTONDOWN):
                 pos = tuple(e.pos)
         super().process_events(events, pos)
 
-    def draw(self, force: bool = False) -> bool:
-        if super().draw(force) is True:
+    def draw(self) -> None:
+        super().draw()
+        if self.updated is True:
             pygame.display.flip()
-            return True
 
     def set_focus(self, focus: bool = True) -> None:
         return
@@ -87,9 +89,11 @@ class UiApp(UiWidget):
     def run(self):
         while True:
             self.controls.update_controls()
-            if self.process_tick(self.controls.get_tick_time()) is False:
+            self.process_tick(self.controls.get_tick_time())
+            if self.exit_loop is True:
                 break
-            if self.process_events(self.controls.events) is False:
+            self.process_events(self.controls.events)
+            if self.exit_loop is True:
                 break
             self.draw()
             self.controls.game_tick()

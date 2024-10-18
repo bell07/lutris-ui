@@ -1,6 +1,5 @@
 import pygame
 
-from lutrisdb import LutrisDb
 from settings import Settings
 from uiwidgets import *
 
@@ -25,8 +24,7 @@ class UiGameWidget(UiWidgetStatic):
             self.data = game_data
         self.label_widget = UiWidgetTextBlock(parent=self, bg_color=pygame.Color(255, 255, 255), alpha=128,
                                               text_centered_x=True, text_centered_y=True,
-                                              pos_x_type=DynamicTypes.TYPE_CENTER, pos_y=-0.1,
-                                              size_h=TEXT_AREA_HEIGHT)
+                                              pos_x_type=DynamicTypes.TYPE_CENTER, pos_y=-0.1, size_h=TEXT_AREA_HEIGHT)
 
     def compose(self, surface: pygame.Surface) -> None:
         max_w = surface.get_width()
@@ -60,22 +58,15 @@ class UiGameWidget(UiWidgetStatic):
             self.label_widget.text = self.name
             self.label_widget.set_changed()
 
-    def launch(self) -> None:
-        self.parent_widget.ldb.launch(self.data)
-        # Game -> Viewport
-        self.parent_widget.set_interactive(False)
-        # Game -> Viewport -> App
-        self.parent_widget.parent_widget.game_is_running.set_running(self)
-
     def process_events(self, events: list, pos: (int, int) = None) -> None:
         if pos is not None:
             for e in events:
                 if e.type == pygame.MOUSEBUTTONUP and e.button == pygame.BUTTON_LEFT:
                     if e.touch is False:
-                        self.launch()
+                        self.get_root_widget().launch(self.data)
                     else:
                         if self.is_focus is True:
-                            self.launch()
+                            self.get_root_widget().launch(self.data)
                         else:
                             self.set_focus()
                     return
@@ -91,14 +82,12 @@ class UiGameWidget(UiWidgetStatic):
         self.set_changed()
 
 
-class UiGameListWidget(UiWidgetViewport):
-    def __init__(self, parent: UiWidget, ldb: LutrisDb, **kwargs):
+class UiGameViewport(UiWidgetViewport):
+    def __init__(self, parent: UiWidget, **kwargs):
         super().__init__(parent, **kwargs)
-        self.bg_color = "Grey"
-        self.ldb = ldb
         self.max_games_cols = 0
         self.game_widgets = []
-        self.set_focus()  # Initial focus for keys processing
+        self.ldb = self.get_root_widget().ldb
 
     def get_game_position(self, index: int) -> (int, int):
         col = (index - 1) % self.max_games_cols
@@ -107,13 +96,13 @@ class UiGameListWidget(UiWidgetViewport):
         pos_y = row * (GAME_WIDGET_HEIGHT + GAME_DISTANCE_HEIGHT)
         return pos_x, pos_y
 
-    def update_games_list(self, force: bool = False) -> None:
-        (visible_width, visible_height) = self.get_rect(with_borders=False).size
+    def update_games_list(self) -> None:
+        (visible_width, visible_height) = self.get_parent_size()
         new_max_games_cols = int(visible_width / (GAME_WIDGET_WIDTH + GAME_DISTANCE_WIDTH))
         if new_max_games_cols == 0:
             new_max_games_cols = 1
 
-        if new_max_games_cols != self.max_games_cols or force is True:
+        if new_max_games_cols != self.max_games_cols:
             update_widgets = True
         else:
             update_widgets = False
@@ -123,13 +112,8 @@ class UiGameListWidget(UiWidgetViewport):
         games_data, list_updated = self.ldb.get_games()
         viewport_height = (int((len(games_data) - 1) / self.max_games_cols) + 1) * (
                 GAME_WIDGET_HEIGHT + GAME_DISTANCE_HEIGHT)
-        if viewport_height < visible_height:
-            viewport_height = visible_height
-        viewport_width = visible_width
-        if viewport_width < GAME_WIDGET_HEIGHT + GAME_DISTANCE_HEIGHT:
-            viewport_width = GAME_WIDGET_HEIGHT + GAME_DISTANCE_HEIGHT
 
-        self.set_viewport_size(viewport_width, viewport_height)
+        self.set_size(GAME_WIDGET_WIDTH, viewport_height)
 
         if len(self.game_widgets) == 0:
             for idx, game_data in enumerate(games_data):
@@ -159,7 +143,7 @@ class UiGameListWidget(UiWidgetViewport):
 
     def select_game(self, command: str) -> None:
         if command == "ENTER" and isinstance(self.focus_child, UiGameWidget):
-            self.focus_child.launch()
+            self.get_root_widget().launch(self.focus_child.data)
             return
 
         selected_game_index = 0
@@ -220,9 +204,14 @@ class UiGameListWidget(UiWidgetViewport):
                     self.shift_y = self.shift_y - (e.y * GAME_WIDGET_HEIGHT / 4)
                     self.set_changed()
 
-    def draw(self, force: bool = False) -> bool:
-        if force is True:
-            self.set_changed()
+    def draw(self) -> None:
         if self.is_changed() or self.is_parent_changed():
-            self.update_games_list(force)
-        return super().draw(force)
+            self.update_games_list()
+        return super().draw()
+
+
+class UiGameListWidget(UiWidgetViewportContainer):
+    def __init__(self, parent: UiWidget, **kwargs):
+        super().__init__(parent, **kwargs)
+        self.bg_color = "Grey"
+        self.set_viewport_widget(UiGameViewport(parent=self, bg_color=self.bg_color))
