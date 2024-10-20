@@ -1,6 +1,6 @@
 import pygame
 
-from uiwidgets import UiWidget
+from uiwidgets import UiWidget, DynamicTypes
 
 
 class UiWidgetsScrollbar(UiWidget):
@@ -11,10 +11,10 @@ class UiWidgetsScrollbar(UiWidget):
         self.scrollbar_width = scrollbar_width
         self.scrollbar_color = scrollbar_color
         if scrollbar_is_horizontal:
-            self._dyn_rect.set_pos(pos_x=0, pos_y=-0.1)
+            self._dyn_rect.set_pos(pos_x=0, pos_y_type=DynamicTypes.TYPE_PIXEL_REVERSE, pos_y=0)
             self._dyn_rect.set_size(size_h=self.scrollbar_width)
         else:
-            self._dyn_rect.set_pos(pos_x=-0.1, pos_y=0)
+            self._dyn_rect.set_pos(pos_x_type=DynamicTypes.TYPE_PIXEL_REVERSE, pos_x=0, pos_y=0)
             self._dyn_rect.set_size(size_w=self.scrollbar_width)
         self.current_value = 0
         self.bar_value = 0

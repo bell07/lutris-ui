@@ -24,7 +24,8 @@ class UiGameWidget(UiWidgetStatic):
             self.data = game_data
         self.label_widget = UiWidgetTextBlock(parent=self, bg_color=pygame.Color(255, 255, 255), alpha=128,
                                               text_centered_x=True, text_centered_y=True,
-                                              pos_x_type=DynamicTypes.TYPE_CENTER, pos_y=-0.1, size_h=TEXT_AREA_HEIGHT)
+                                              pos_x_type=DynamicTypes.TYPE_CENTER,
+                                              pos_y_type=DynamicTypes.TYPE_PIXEL_REVERSE, size_h=TEXT_AREA_HEIGHT)
 
     def compose(self, surface: pygame.Surface) -> None:
         max_w = surface.get_width()
@@ -184,7 +185,7 @@ class UiGameViewport(UiWidgetViewport):
         selected_widget = self.game_widgets[selected_game_index]
         selected_widget.set_focus()
 
-        viewport_h = self.get_rect(with_borders=False).height
+        viewport_h = self.parent_widget.get_rect(with_borders=False).height
         widget_rect = selected_widget.get_rect(with_borders=True)
         if widget_rect.y < self.shift_y:
             self.shift_y = widget_rect.y

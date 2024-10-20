@@ -13,11 +13,11 @@ class UiWidget:
         self._dyn_rect = DynamicRect(**kwargs)
         self._is_changed = True
         self._child_changed = True
-        self.updated = False
 
         self.is_visible = True
         self.is_interactive = True
         self.is_focus = False
+        self.updated = False
 
         self.widgets = None
         self.focus_child = None
@@ -32,16 +32,16 @@ class UiWidget:
         self._dyn_rect.set_parent_size_by_surface(parent.get_surface(with_borders=False))
         self._parent_surface = None
 
-    def get_parent_surface(self) -> Surface:
-        if self._parent_surface is None or self.is_parent_changed() is True:
-            self._parent_surface = self.parent_widget.get_surface(with_borders=False)
-        return self._parent_surface
-
     def get_root_widget(self):  # -> No annotation because root type "unknown/custom"
         if self.parent_widget is not None:
             return self.parent_widget.get_root_widget()
         else:
             return self
+
+    def get_parent_surface(self) -> Surface:
+        if self._parent_surface is None or self.is_parent_changed() is True:
+            self._parent_surface = self.parent_widget.get_surface(with_borders=False)
+        return self._parent_surface
 
     def get_parent_size(self) -> (int, int):
         return self.parent_widget.get_size(with_borders=False)

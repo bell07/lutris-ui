@@ -3,8 +3,9 @@ from pygame import Rect, Surface
 
 class DynamicTypes:
     TYPE_PIXEL = 1
-    TYPE_PERCENT = 2
-    TYPE_CENTER = 3
+    TYPE_PIXEL_REVERSE = 2
+    TYPE_PERCENT = 3
+    TYPE_CENTER = 4
 
 
 class DynamicRect:
@@ -53,6 +54,9 @@ class DynamicRect:
             self.parent_h = parent_h
             self.changed = True
 
+    def set_parent_size_by_surface(self, parent_surface: Surface) -> None:
+        self.set_parent_size(*parent_surface.get_size())
+
     def set_pos(self, pos_x_type: int = None, pos_x: float = None, pos_y_type: int = None, pos_y: float = None) -> None:
         if pos_x is not None:
             self.pos_x_type = pos_x_type or DynamicTypes.TYPE_PIXEL
@@ -70,9 +74,6 @@ class DynamicRect:
             self.size_h_type = size_h_type or DynamicTypes.TYPE_PIXEL
             self.size_h = size_h
         self.changed = True
-
-    def set_parent_size_by_surface(self, parent_surface: Surface) -> None:
-        self.set_parent_size(*parent_surface.get_size())
 
     def set_border(self, border_all: float = None, border_top: float = None, border_bottom: float = None,
                    border_left: float = None, border_right: float = None) -> None:
@@ -105,18 +106,16 @@ class DynamicRect:
 
         w, h, x, y = 0, 0, 0, 0
         assert self.parent_w is not None and self.parent_h is not None, "Parent size required for rect calculations"
-        assert self.size_w_type != DynamicTypes.TYPE_CENTER and self.size_h_type != DynamicTypes.TYPE_CENTER, "TYPE_CENTER not supported for size"
+        assert self.size_w_type != DynamicTypes.TYPE_CENTER\
+               and self.size_h_type != DynamicTypes.TYPE_CENTER, "TYPE_CENTER not supported for size"
         max_w = self.parent_w
         max_h = self.parent_h
 
         match self.size_w_type:
             case DynamicTypes.TYPE_PIXEL:
-                if self.size_w < 0:
-                    w = max_w + self.size_w
-                else:
-                    w = self.size_w
-                    if w < 0:
-                        w = 0
+                w = self.size_w
+            case DynamicTypes.TYPE_PIXEL_REVERSE:
+                w = max_w - self.size_w
             case DynamicTypes.TYPE_PERCENT:
                 w = max_w * self.size_w / 100
 
@@ -127,12 +126,9 @@ class DynamicRect:
 
         match self.size_h_type:
             case DynamicTypes.TYPE_PIXEL:
-                if self.size_h < 0:
-                    h = max_h + self.size_h
-                else:
-                    h = self.size_h
-                    if h < 0:
-                        h = 0
+                h = self.size_h
+            case DynamicTypes.TYPE_PIXEL_REVERSE:
+                h = max_h - self.size_h
             case DynamicTypes.TYPE_PERCENT:
                 h = max_h * self.size_h / 100
         if h < 0:
@@ -142,10 +138,9 @@ class DynamicRect:
 
         match self.pos_x_type:
             case DynamicTypes.TYPE_PIXEL:
-                if self.pos_x < 0:
-                    x = self.parent_w - w + self.pos_x
-                else:
-                    x = self.pos_x
+                x = self.pos_x
+            case DynamicTypes.TYPE_PIXEL_REVERSE:
+                x = self.parent_w - w - self.pos_x
             case DynamicTypes.TYPE_PERCENT:
                 x = (max_w - w) * self.pos_x / 100
             case DynamicTypes.TYPE_CENTER:
@@ -157,10 +152,9 @@ class DynamicRect:
 
         match self.pos_y_type:
             case DynamicTypes.TYPE_PIXEL:
-                if self.pos_y < 0:
-                    y = self.parent_h - h + self.pos_y
-                else:
-                    y = self.pos_y
+                y = self.pos_y
+            case DynamicTypes.TYPE_PIXEL_REVERSE:
+                y = self.parent_h - h - self.pos_y
             case DynamicTypes.TYPE_PERCENT:
                 y = (max_h - h) * self.pos_y / 100
             case DynamicTypes.TYPE_CENTER:

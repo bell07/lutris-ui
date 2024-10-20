@@ -30,6 +30,7 @@ class LutrisUiApp(UiApp):
         self.ldb = LutrisDb()
         self.games_viewport = UiGameListWidget(self, border_all=10, border_color="Grey")
         self.game_is_running = UiGameIsRunningWidget(self, border_all=10, border_color="Grey")
+        self._hide_on_launch = Settings("play").get("hide_on_launch", False)
 
     def process_events(self, events: list, pos: (int, int) = None) -> None:
         for e in events:
@@ -53,3 +54,12 @@ class LutrisUiApp(UiApp):
         self.ldb.launch(game_data)
         self.games_viewport.set_interactive(False)
         self.game_is_running.set_running(game_data)
+        if self._hide_on_launch is True:
+            pygame.display.iconify()
+
+    def launch_completed(self) -> None:
+        self.ldb.data_changed = True
+        self.game_is_running.set_visible(False)
+        if self._hide_on_launch is True:
+            self.init_display_settings()
+        self.games_viewport.set_focus(True)

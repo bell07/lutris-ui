@@ -9,10 +9,10 @@ class Controls:
 
     def __init__(self, repeatable_commands: tuple = None, keyboard_commands: dict = None,
                  joypad_keys_commands: dict = None):
-        self.events = None
         self.repeatable_commands = repeatable_commands or {}
         self.keyboard_commands = keyboard_commands or []
         self.joypad_keys_commands = joypad_keys_commands or []
+        self.events = None
         settings = Settings("input")
         self.repeat_time_1 = settings.get("repeat_time_1", 500)  # ms
         self.repeat_time_2 = settings.get("repeat_time_2", 200)  # ms

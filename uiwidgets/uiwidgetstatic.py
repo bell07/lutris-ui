@@ -44,10 +44,11 @@ class UiWidgetStatic(UiWidget):
         if self.is_visible is False:
             return
 
+        compose_surface = self.get_surface(with_borders=False)  # Contain the check for surface changes
         if self.is_changed() is True:
             if self.bg_color is not None:
                 self.get_surface(with_borders=True).fill(self.bg_color)
-            self.compose(self.get_surface(with_borders=False))
+            self.compose(compose_surface)
             self.compose_borders()
 
         if self.widgets is not None and (self._child_changed is True or self.is_changed() is True):
