@@ -8,7 +8,7 @@ Lutris-UI is written in Python, the same scripting language as Lutris.
 
 License: [GPL-v3](LICENSE.txt) - Same as Lutris
 
-Project status: "Worksforme". No warranty it does wor for you. But any contribution is welcome
+Project status: "Works-for-me". No warranty it does work for you. But any contribution is welcome
 
 
 ![Screnshot](screenshots/lutris%20and%20lutris-ui%20screenshot.png "Screenshot")
