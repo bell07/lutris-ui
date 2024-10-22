@@ -89,26 +89,26 @@ class UiGameViewport(UiWidgetViewport):
         self.max_games_cols = 0
         self.game_widgets = []
         self.ldb = self.get_root_widget().ldb
+        self._old_width = 0
 
-    def get_game_position(self, index: int) -> (int, int):
+    def get_game_position(self, index: int, optimized_width: float) -> (int, int):
         col = (index - 1) % self.max_games_cols
         row = int((index - 1) / self.max_games_cols)
-        pos_x = col * (GAME_WIDGET_WIDTH + GAME_DISTANCE_WIDTH)
+        pos_x = col * (GAME_WIDGET_WIDTH + optimized_width)
         pos_y = row * (GAME_WIDGET_HEIGHT + GAME_DISTANCE_HEIGHT)
         return pos_x, pos_y
 
     def update_games_list(self) -> None:
         (visible_width, visible_height) = self.get_parent_size()
-        new_max_games_cols = int(visible_width / (GAME_WIDGET_WIDTH + GAME_DISTANCE_WIDTH))
-        if new_max_games_cols == 0:
-            new_max_games_cols = 1
 
-        if new_max_games_cols != self.max_games_cols:
+        if self._old_width != visible_width:
+            self._old_width = visible_width
             update_widgets = True
+            self.max_games_cols = int(visible_width / (GAME_WIDGET_WIDTH + GAME_DISTANCE_WIDTH))
+            if self.max_games_cols == 0:
+                self.max_games_cols = 1
         else:
             update_widgets = False
-
-        self.max_games_cols = new_max_games_cols
 
         games_data, list_updated = self.ldb.get_games()
         viewport_height = (int((len(games_data) - 1) / self.max_games_cols) + 1) * (
@@ -116,14 +116,19 @@ class UiGameViewport(UiWidgetViewport):
 
         self.set_size(GAME_WIDGET_WIDTH, viewport_height)
 
+        if self.max_games_cols >= len(games_data):
+            optimized_distance_width = GAME_DISTANCE_WIDTH
+        else:
+            optimized_distance_width = (visible_width - self.max_games_cols * GAME_WIDGET_WIDTH) / self.max_games_cols
+
         if len(self.game_widgets) == 0:
             for idx, game_data in enumerate(games_data):
-                pos_x, pos_y = self.get_game_position(idx + 1)
+                pos_x, pos_y = self.get_game_position(idx + 1, optimized_distance_width)
                 self.game_widgets.append(UiGameWidget(self, game_data, pos_x=pos_x, pos_y=pos_y))
             self.select_game("TOP")
         elif update_widgets is True or list_updated is True:
             for idx, game_data in enumerate(games_data):
-                pos_x, pos_y = self.get_game_position(idx + 1)
+                pos_x, pos_y = self.get_game_position(idx + 1, optimized_distance_width)
                 widget_found = False
                 if idx < len(self.game_widgets):
                     for old_idx in range(idx, len(self.game_widgets)):
