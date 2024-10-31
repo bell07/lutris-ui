@@ -70,7 +70,7 @@ Base widget class. This widget does not have own surface and draw into parent su
 | Method                                                                    | Reason                                                                                                                                                                                           |
 |---------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | set_parent_surface(parent: UiWidget)                                      | Called once on init in constructor and should not be called again                                                                                                                                |
-| get_root_widget()                                                         | Search parents recursuvelly to get the root widget                                                                                                                                               |
+| get_root_widget()                                                         | Search parents recursuvely to get the root widget                                                                                                                                                |
 | get_parent_surface() -> pygame.Surface                                    | Get the parent widget surface to draw into                                                                                                                                                       |
 | get_parent_size() -> (int, int)                                           | Get the size of the parent surface. Uses parent_widget.get_size() with exception in UiApp()                                                                                                      |
 | get_rect(with_borders: bool = False) -> pygame.Rect                       | Get the widget coordinates, inside or outside borders, calculated in DynamicRect                                                                                                                 |
@@ -240,13 +240,13 @@ methods.
 > DynamicTypes.TYPE_PIXEL
 
 For position the value is pixel count from top or left site.
-For size it is the widget width / height including borders.
+For size, it is the widget width / height including borders.
 This type is default, if nothing given.
 
 > DynamicTypes.TYPE_PIXEL_REVERSE
 
 For position the value is pixel count from bottom or right site.
-For size it is the (reserved) size right of bottom the widget that should remain
+For size, it is the (reserved) size right of bottom the widget that should remain
 This type is default, if nothing given.
 
 > DynamicTypes.TYPE_PERCENT

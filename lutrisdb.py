@@ -35,7 +35,7 @@ class LutrisDb:
             data["coverart"] = self.get_cover_art(game_data)
             self.games_data.append(data)
 
-        # Note:  fallback "0" is for non existing lastplayed value. This should not affect sorting by name
+        # Note:  fallback "0" is for non-existing lastplayed value. This should not affect sorting by name
         self.games_data.sort(key=lambda game: game.get(self._sort_key) or 0, reverse=self._sort_reverse)
         self.data_changed = False
         return self.games_data, True
