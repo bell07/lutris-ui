@@ -1,6 +1,6 @@
 import pygame
 
-from uigamelist import UiGameWidget
+from uigamelist import UiGameWidget, GAME_WIDGET_HEIGHT, GAME_WIDGET_WIDTH
 from uiwidgets import UiWidget, UiWidgetStatic, DynamicTypes, UiWidgetTextBlock, Controls
 
 
@@ -40,8 +40,7 @@ class UiGameIsRunningWidget(UiWidget):
                                       pos_y_type=DynamicTypes.TYPE_PIXEL_REVERSE, size_h=button_size,
                                       border_color=self.game_widget.border_color, border_all=10, border_top=0,
                                       text_centered_x=True, text_centered_y=True)
-        gw_rect = self.game_widget.get_rect(with_borders=True)
-        popup.set_size(size_w=gw_rect.w, size_h=gw_rect.h + button_size)
+        popup.set_size(size_w=GAME_WIDGET_WIDTH, size_h=GAME_WIDGET_HEIGHT + button_size)
         self._kill_in_progress = False
 
     def set_kill_running(self):
