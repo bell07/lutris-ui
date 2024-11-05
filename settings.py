@@ -5,9 +5,10 @@ from xdg import BaseDirectory
 
 SAVE_DEFAULTS = False
 
+_app_name = "lutris-ui"
+
 
 class Settings:
-    config_file = os.path.join(BaseDirectory.xdg_config_home, 'lutris-ui', 'config.ini')
     config = None
     config_changed = False
 
@@ -16,9 +17,14 @@ class Settings:
 
     @staticmethod
     def open_config() -> None:
-        if Settings.config is None:
-            Settings.config = configparser.ConfigParser()
-            Settings.config.read(Settings.config_file)
+        if Settings.config is not None:
+            return
+
+        Settings.config = configparser.ConfigParser()
+        for path in reversed(list(BaseDirectory.load_config_paths(_app_name))):
+            file = os.path.join(path, 'config.ini')
+            if os.path.isfile(file):
+                Settings.config.read(file)
 
     def set_default_value(self, key: str, value: any) -> None:
         if SAVE_DEFAULTS is False:
@@ -62,20 +68,24 @@ class Settings:
     def save() -> None:
         if Settings.config_changed is False:
             return
-        os.makedirs(os.path.dirname(Settings.config_file), exist_ok=True)
-        with open(Settings.config_file, 'w') as f:
+        config_path = BaseDirectory.save_config_path(_app_name)
+        if config_path is None:
+            config_path = os.path.join(BaseDirectory.xdg_config_home, _app_name)
+            os.makedirs(config_path, exist_ok=True)
+
+        with open(os.path.join(config_path, 'config.ini'), 'w') as f:
             Settings.config.write(f)
             f.close()
 
     @staticmethod
     def get_ressource_path(file_name: str) -> str:
         # File in Development repository
-        ressource = os.path.join(os.path.dirname(os.path.realpath(__file__)), "ressources", file_name)
-        if os.path.isfile(ressource):
-            return ressource
+        resource = os.path.join(os.path.dirname(os.path.realpath(__file__)), "resources", file_name)
+        if os.path.isfile(resource):
+            return resource
 
         # Check xdg paths
         for path in BaseDirectory.xdg_data_dirs:
-            ressource = os.path.join(path, "lutris-ui", file_name)
-            if os.path.isfile(ressource):
-                return ressource
+            resource = os.path.join(path, _app_name, file_name)
+            if os.path.isfile(resource):
+                return resource
