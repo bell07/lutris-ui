@@ -27,6 +27,8 @@ class LutrisUiApp(UiApp):
         size_h = self.settings.get("size_h", 0)
         super().__init__(controls=controls, size_w=size_w, size_h=size_h, fullscreen=fullscreen, noframe=noframe)
         pygame.display.set_caption("Lutris-UI")
+        icon_path = self.settings.get_ressource_path('lutris-ui.png')
+        pygame.display.set_icon(pygame.image.load(icon_path))
         self.ldb = LutrisDb()
         self.games_viewport = UiGameListWidget(self, border_all=10, border_color="Grey")
         self.game_is_running = UiGameIsRunningWidget(self, border_all=10, border_color="Grey")

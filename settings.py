@@ -66,3 +66,16 @@ class Settings:
         with open(Settings.config_file, 'w') as f:
             Settings.config.write(f)
             f.close()
+
+    @staticmethod
+    def get_ressource_path(file_name: str) -> str:
+        # File in Development repository
+        ressource = os.path.join(os.path.dirname(os.path.realpath(__file__)), "ressources", file_name)
+        if os.path.isfile(ressource):
+            return ressource
+
+        # Check xdg paths
+        for path in BaseDirectory.xdg_data_dirs:
+            ressource = os.path.join(path, "lutris-ui", file_name)
+            if os.path.isfile(ressource):
+                return ressource
