@@ -70,7 +70,7 @@ Base widget class. This widget does not have own surface and draw into parent su
 | Method                                                                    | Reason                                                                                                                                                                                           |
 |---------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | set_parent_surface(parent: UiWidget)                                      | Called once on init in constructor and should not be called again                                                                                                                                |
-| get_root_widget()                                                         | Search parents recursuvely to get the root widget                                                                                                                                                |
+| get_root_widget()                                                         | Search parents recursively to get the root widget                                                                                                                                                |
 | get_parent_surface() -> pygame.Surface                                    | Get the parent widget surface to draw into                                                                                                                                                       |
 | get_parent_size() -> (int, int)                                           | Get the size of the parent surface. Uses parent_widget.get_size() with exception in UiApp()                                                                                                      |
 | get_rect(with_borders: bool = False) -> pygame.Rect                       | Get the widget coordinates, inside or outside borders, calculated in DynamicRect                                                                                                                 |
@@ -138,7 +138,7 @@ At this point only the UiApp specific attributes and methods are mentioned.
 | Method                                               | Reason                                                                                               |
 |------------------------------------------------------|------------------------------------------------------------------------------------------------------|
 | init_display_settings(reset: bool = False)           | Called on application init. Can be used to show window again after iconify. Used to toggle "noframe" |
-| process_events(events: list, pos: (int, int) = None) | Handle for EXIT command, Window resize and get the first position for pointeable events              |
+| process_events(events: list, pos: (int, int) = None) | Handle for EXIT command, Window resize and get the first position for pointable events               |
 | draw()                                               | Draw all widgets recursively. pygame.display.flip() only if anything updated                         | 
 | run()                                                | Main loop with update_controls(), process_tick(), process_events(), draw() and game_tick()           |
 
@@ -198,7 +198,7 @@ area content. The Port can be assigned to UiWidgetViewportContainer using set_vi
 | Method                                                    | Reason                                                                                        |
 |-----------------------------------------------------------|-----------------------------------------------------------------------------------------------|
 | set_size(w: int, h: int)                                  | Set size of viewport. If size is smaller then parent, the size is adjusted to fill the parent |
-| get_surface(with_borders: bool = False) -> pygame.Surface | Get the viewport surface including invisilbe area parts                                       |
+| get_surface(with_borders: bool = False) -> pygame.Surface | Get the viewport surface including invisible area parts                                       |
 | adjust_shift()                                            | Check if remaining area is fully visible after shift. scroll back if right/bottom is reached  |  
 | draw()                                                    | draw childs and blit the visible area into parent surface                                     |
 | process_events(events: list, pos: (int, int) = None)      | Handle touch drag for scrolling. do not pass events to childs if scrolling was happens        |
