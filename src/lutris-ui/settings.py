@@ -80,9 +80,13 @@ class Settings:
     @staticmethod
     def get_ressource_path(file_name: str) -> str:
         # File in Development repository
-        resource = os.path.join(os.path.dirname(os.path.realpath(__file__)), "resources", file_name)
-        if os.path.isfile(resource):
-            return resource
+        my_path = os.path.realpath(__file__).split(os.sep)
+        if len(my_path) > 3 and my_path[-3] == "src" and my_path[-2] == _app_name:
+            if my_path[0] == '':
+                my_path[0] = os.sep
+            resource = os.path.join(*my_path[:-3], "resources", file_name)
+            if os.path.isfile(resource):
+                return resource
 
         # Check xdg paths
         for path in BaseDirectory.xdg_data_dirs:
