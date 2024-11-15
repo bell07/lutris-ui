@@ -82,14 +82,10 @@ class Settings:
         # File in Development repository
         my_path = os.path.realpath(__file__).split(os.sep)
         if len(my_path) > 3 and my_path[-3] == "src" and my_path[-2] == _app_name:
-            if my_path[0] == '':
-                my_path[0] = os.sep
-            resource = os.path.join(*my_path[:-3], "resources", file_name)
-            if os.path.isfile(resource):
-                return resource
+            return os.path.join(os.sep.join(my_path[:-3]), "resources", file_name)
 
         # Check xdg paths
         for path in BaseDirectory.xdg_data_dirs:
-            resource = os.path.join(path, _app_name, file_name)
+            resource = os.path.join(path, _app_name, "resources", file_name)
             if os.path.isfile(resource):
                 return resource
