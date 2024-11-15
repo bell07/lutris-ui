@@ -86,6 +86,6 @@ The launcher can be controlled by Keyboard, Joypad, Mouse or Touchscreen.
 
 ## For developers
 
-For Lutris-UI I wrote a new [Widgets API](uiwidgets/API.md) with intention to release it separately later.
+For Lutris-UI I wrote a new [Widgets API](src/uiwidgets/API.md) with intention to release it separately later.
 I know, they are some other pygame based API already. This Widget-API allow relative coordinates,
 so window resizing is handled properly from beginning.
