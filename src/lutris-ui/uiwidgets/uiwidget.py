@@ -17,6 +17,7 @@ class UiWidget:
         self.is_visible = True
         self.is_interactive = True
         self.is_focus = False
+        self.process_tick_enabled = False
         self.updated = False
 
         self.widgets = None
@@ -163,6 +164,25 @@ class UiWidget:
             self.set_focus(False)
         self.set_changed()
 
+    def set_process_tick_enabled(self, enabled: bool = True) -> None:
+        if self.process_tick_enabled == enabled:
+            return
+
+        self.process_tick_enabled = enabled
+        if self.parent_widget is None:
+            return
+
+        if enabled is True:
+            self.parent_widget.set_process_tick_enabled(enabled=True)
+        else:
+            siblings_enabled = False
+            for widget in self.parent_widget.widgets:
+                if widget.process_tick_enabled is True:
+                    siblings_enabled = True
+                    break
+            if siblings_enabled is False:
+                self.parent_widget.set_process_tick_enabled(False)
+
     def draw(self) -> None:
         self.updated = False
         if self.is_visible is False:
@@ -238,4 +258,5 @@ class UiWidget:
         if self.widgets is None:
             return
         for widget in self.widgets:
-            widget.process_tick(milliseconds)
+            if widget.process_tick_enabled is True:
+                widget.process_tick(milliseconds)

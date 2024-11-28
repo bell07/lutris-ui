@@ -65,6 +65,7 @@ class UiGameIsRunningWidget(UiWidget):
         self.game_widget.name = game_data["name"]
         self.game_widget.data = game_data
         self.game_widget.set_changed()
+        self.set_process_tick_enabled()
 
     def process_tick(self, milliseconds: int) -> None:
         if self.game_data is None:
@@ -73,7 +74,7 @@ class UiGameIsRunningWidget(UiWidget):
         if self.ldb.check_is_running() is False:
             self.game_data = None
             self.get_root_widget().launch_completed()
-
+            self.set_process_tick_enabled(False)
         else:
             if self._kill_in_progress is True:
                 self.ldb.kill_running()
