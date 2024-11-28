@@ -67,7 +67,7 @@ class Controls:
             return None
 
         # Check for Timer 1
-        self._timer1 = self._timer1 + self._clock.get_time()
+        self._timer1 += self._clock.get_time()
 
         # Repeat time 1 not reached
         if self._timer1 < self.repeat_time_1 and self._timer2 is None:
@@ -79,7 +79,7 @@ class Controls:
             return pygame.event.Event(Controls.COMMAND_EVENT,
                                       {"command": self._pressed_command, "origin": self._pressed_event})
         else:
-            self._timer2 = self._timer2 + self._clock.get_time()
+            self._timer2 += self._clock.get_time()
 
             # Repeat time 2 not reached
         if self._timer2 < self.repeat_time_2:
@@ -115,7 +115,8 @@ class Controls:
             match e.type:
                 case pygame.KEYDOWN:
                     code = self.keyboard_commands.get(e.key)
-                    if code is not None and e.mod == pygame.KMOD_NONE:
+                    if code is not None and (
+                            e.mod & ~(pygame.KMOD_CAPS | pygame.KMOD_NUM | pygame.KMOD_MODE) == pygame.KMOD_NONE):
                         self._append_custom_event(code, e, mapped_events)
                     else:
                         mapped_events.append(e)
