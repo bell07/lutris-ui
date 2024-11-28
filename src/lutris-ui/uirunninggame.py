@@ -71,7 +71,7 @@ class UiGameIsRunningWidget(UiWidget):
         if self.game_data is None:
             return
 
-        if self.ldb.check_is_running() is False:
+        if self.ldb.check_is_running(self._kill_in_progress) is False:
             self.game_data = None
             self.get_root_widget().launch_completed()
             self.set_process_tick_enabled(False)
