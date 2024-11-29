@@ -1,3 +1,5 @@
+import time
+
 import pygame
 
 from settings import Settings
@@ -52,7 +54,7 @@ class Controls:
         else:
             self._pressed_command = command
             self._pressed_event = event
-            self._timer1 = 0
+            self._timer1 = time.time()
             self._timer2 = None
             return True  # Pressed first time
 
@@ -66,26 +68,23 @@ class Controls:
         if self._pressed_command is None:
             return None
 
-        # Check for Timer 1
-        self._timer1 += self._clock.get_time()
+        now = time.time()
 
         # Repeat time 1 not reached
-        if self._timer1 < self.repeat_time_1 and self._timer2 is None:
+        if (now - self._timer1) * 1000 < self.repeat_time_1 and self._timer2 is None:
             return None
 
         # Check for timer 2
         if self._timer2 is None:
-            self._timer2 = 0
+            self._timer2 = now
             return pygame.event.Event(Controls.COMMAND_EVENT,
                                       {"command": self._pressed_command, "origin": self._pressed_event})
-        else:
-            self._timer2 += self._clock.get_time()
 
             # Repeat time 2 not reached
-        if self._timer2 < self.repeat_time_2:
+        if (now - self._timer2) * 1000 < self.repeat_time_2:
             return None
 
-        self._timer2 = self._timer2 % self.repeat_time_2
+        self._timer2 = now
         return pygame.event.Event(Controls.COMMAND_EVENT,
                                   {"command": self._pressed_command, "origin": self._pressed_event})
 
@@ -103,11 +102,11 @@ class Controls:
             return "DOWN"
 
     def _append_custom_event(self, command: str, event: pygame.event.Event, events: list):
+        if any(e.type == Controls.COMMAND_EVENT for e in events):
+            return  # Only 1 command in game step
+        events.append(pygame.event.Event(Controls.COMMAND_EVENT, {"command": command, "origin": event}))
         if command in self.repeatable_commands:
-            if self._press(command, event) is True:
-                events.append(pygame.event.Event(Controls.COMMAND_EVENT, {"command": command, "origin": event}))
-        else:
-            events.append(pygame.event.Event(Controls.COMMAND_EVENT, {"command": command, "origin": event}))
+            self._press(command, event)
 
     def _apply_custom_events(self, events: list) -> None:
         for e in events:
@@ -151,11 +150,16 @@ class Controls:
                         self._append_custom_event(code, e, events)
 
     def update_controls(self) -> None:
-        current_events = pygame.event.get()
+        self.events.clear()
+        if self._pressed_command is None:
+            wait_event = pygame.event.wait(timeout=1000)
+            if wait_event.type != pygame.NOEVENT:
+                self.events.append(wait_event)
+        self.events += pygame.event.get()
+
         # Basic processing. Track release key
-        if current_events:
-            self.events.clear()
-            for e in current_events:
+        if self.events:
+            for e in self.events:
                 match e.type:
                     case pygame.JOYDEVICEADDED:
                         js = pygame.joystick.Joystick(e.device_index)
@@ -168,7 +172,6 @@ class Controls:
                         self._release(e)
                     case pygame.JOYBUTTONUP:  # instance_id, button
                         self._release(e)
-                self.events.append(e)
 
             # Map to custom events
             self._apply_custom_events(self.events)
@@ -178,6 +181,8 @@ class Controls:
         # Apply repeated key
         repeat_event = self._get_repeated_key()
         if repeat_event is not None:
+            if any(e.type == Controls.COMMAND_EVENT for e in self.events):
+                return  # Only 1 command in game step
             self.events.append(repeat_event)
 
     def game_tick(self) -> None:
