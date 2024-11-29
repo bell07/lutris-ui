@@ -60,15 +60,12 @@ class LutrisModule(BaseModule):
                 try:
                     if process.uids().real != os.getuid():
                         continue
-                    cmdline = process.cmdline()
-                    if len(cmdline) == 0:
-                        continue
                 except psutil.ZombieProcess:
                     continue
                 except psutil.NoSuchProcess:
                     continue
 
-                if cmdline[0].startswith("lutris-wrapper:"):
+                if process.name().startswith("lutris-wrapper"):
                     self.pid = process.pid
         return super().check_is_running()
 
@@ -103,6 +100,7 @@ class SteamModule(BaseModule):
             if root_process.is_running():
                 for child in root_process.children():
                     try:
+                        # Assumption: Command line is 'bash', '*/steam.sh', 'steam://rungameid/*'
                         if child.cmdline()[2].startswith('steam://rungameid'):
                             if self.shutdown_sent_time is not None:
                                 if (datetime.now() - self.shutdown_sent_time).total_seconds() < 10:
