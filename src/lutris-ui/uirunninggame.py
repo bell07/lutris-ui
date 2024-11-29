@@ -67,7 +67,7 @@ class UiGameIsRunningWidget(UiWidget):
         self.game_widget.set_changed()
         self.set_process_tick_enabled()
 
-    def process_tick(self, milliseconds: int) -> None:
+    def process_tick(self) -> None:
         if self.game_data is None:
             return
 

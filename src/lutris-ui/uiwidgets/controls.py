@@ -158,25 +158,29 @@ class Controls:
         return mapped_events
 
     def update_controls(self) -> None:
+        current_events = pygame.event.get()
         # Basic processing. Track release key
-        events = []
-        for e in pygame.event.get():
-            match e.type:
-                case pygame.JOYDEVICEADDED:
-                    js = pygame.joystick.Joystick(e.device_index)
-                    self.init_all_js()
-                    print(f"Joystick added: {str(js.get_name())}")
-                case pygame.JOYDEVICEREMOVED:
-                    print(f"Joystick removed: {e.instance_id}")
-                    self.init_all_js()
-                case pygame.KEYUP:
-                    self._release(e)
-                case pygame.JOYBUTTONUP:  # instance_id, button
-                    self._release(e)
-            events.append(e)
+        if len(current_events) > 0:
+            events = []
+            for e in current_events:
+                match e.type:
+                    case pygame.JOYDEVICEADDED:
+                        js = pygame.joystick.Joystick(e.device_index)
+                        self.init_all_js()
+                        print(f"Joystick added: {str(js.get_name())}")
+                    case pygame.JOYDEVICEREMOVED:
+                        print(f"Joystick removed: {e.instance_id}")
+                        self.init_all_js()
+                    case pygame.KEYUP:
+                        self._release(e)
+                    case pygame.JOYBUTTONUP:  # instance_id, button
+                        self._release(e)
+                events.append(e)
 
-        # Map to custom events
-        self.events = self._apply_custom_events(events)
+            # Map to custom events
+            self.events = self._apply_custom_events(events)
+        elif len(self.events) > 0:
+            self.events = []
 
         # Apply repeated key
         repeat_event = self._get_repeated_key()

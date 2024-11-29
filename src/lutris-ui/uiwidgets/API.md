@@ -98,7 +98,7 @@ Base widget class. This widget does not have own surface and draw into parent su
 | get_widget_collide_point(widget: UiWidget, pos: (int, int)) -> (int, int) | Check if given pos is inside the widget. Return relative position inside the widget. In case of pointed top or left borders the value is negative                                                |
 | get_child_by_pos(pos: (int, int)) -> (UiWidget, (int, int))               | Check all visible childs for position. Search is in reverse order, to get the widget from top of the widget stack if widgets overlaps                                                            |
 | process_events(events: list, pos: (int, int) = None)                      | Called from run() method to deliver events recursively. Can ber redefined to add own events handling. The super().process_events() needs to be called to deliver events to the childs            |
-| process_tick(milliseconds: float)                                         | Is called each game step for own logic recursively.Can ber redefined to add own game step logic. The super().process_tick() needs to be called to trigger the children widgets logic             | 
+| process_tick()                                                            | Is called each game step for own logic recursively.Can ber redefined to add own game step logic. The super().process_tick() needs to be called to trigger the children widgets logic             | 
 
 ## UiWidgetStatic
 

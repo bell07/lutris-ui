@@ -67,6 +67,9 @@ class UiApp(UiWidget):
         self._detached_surface_changed = False
 
     def process_events(self, events: list, pos: (int, int) = None) -> None:
+        if len(events) == 0:
+            return
+
         for e in events:
             if e.type in (pygame.WINDOWSIZECHANGED, pygame.WINDOWRESTORED):
                 self.set_changed()
@@ -89,7 +92,7 @@ class UiApp(UiWidget):
     def run(self):
         while True:
             self.controls.update_controls()
-            self.process_tick(self.controls.get_tick_time())
+            self.process_tick()
             if self.exit_loop is True:
                 break
             self.process_events(self.controls.events)

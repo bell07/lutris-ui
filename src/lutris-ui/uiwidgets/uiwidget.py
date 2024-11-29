@@ -254,9 +254,9 @@ class UiWidget:
                     and self.focus_child.is_visible is True and self.focus_child.is_interactive is True:
                 self.focus_child.process_events(events)
 
-    def process_tick(self, milliseconds: float) -> None:
+    def process_tick(self) -> None:
         if self.widgets is None:
             return
         for widget in self.widgets:
             if widget.process_tick_enabled is True:
-                widget.process_tick(milliseconds)
+                widget.process_tick()
