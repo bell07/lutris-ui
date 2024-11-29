@@ -121,7 +121,7 @@ class UiGameViewport(UiWidgetViewport):
         else:
             optimized_distance_width = (visible_width - self.max_games_cols * GAME_WIDGET_WIDTH) / self.max_games_cols
 
-        if len(self.game_widgets) == 0:
+        if not self.game_widgets:
             for idx, game_data in enumerate(games_data):
                 pos_x, pos_y = self.get_game_position(idx + 1, optimized_distance_width)
                 self.game_widgets.append(UiGameWidget(self, game_data, pos_x=pos_x, pos_y=pos_y))
@@ -163,15 +163,15 @@ class UiGameViewport(UiWidgetViewport):
             case "TOP":
                 selected_game_index = 0
             case "UP":
-                selected_game_index = selected_game_index - self.max_games_cols
+                selected_game_index -= self.max_games_cols
             case "DOWN":
-                selected_game_index = selected_game_index + self.max_games_cols
+                selected_game_index += self.max_games_cols
             case "BOTTOM":
                 selected_game_index = len(self.game_widgets) - 1
             case "LEFT":
-                selected_game_index = selected_game_index - 1
+                selected_game_index -= 1
             case "RIGHT":
-                selected_game_index = selected_game_index + 1
+                selected_game_index += 1
             case "RELOAD":
                 self.ldb.data_changed = True
                 self.set_changed()

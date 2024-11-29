@@ -12,7 +12,7 @@ class Controls:
         self.repeatable_commands = repeatable_commands or {}
         self.keyboard_commands = keyboard_commands or []
         self.joypad_keys_commands = joypad_keys_commands or []
-        self.events = None
+        self.events = []
         settings = Settings("input")
         self.repeat_time_1 = settings.get("repeat_time_1", 500)  # ms
         self.repeat_time_2 = settings.get("repeat_time_2", 200)  # ms
@@ -109,33 +109,29 @@ class Controls:
         else:
             events.append(pygame.event.Event(Controls.COMMAND_EVENT, {"command": command, "origin": event}))
 
-    def _apply_custom_events(self, events: list) -> list:
-        mapped_events = []
+    def _apply_custom_events(self, events: list) -> None:
         for e in events:
             match e.type:
                 case pygame.KEYDOWN:
                     code = self.keyboard_commands.get(e.key)
                     if code is not None and (
                             e.mod & ~(pygame.KMOD_CAPS | pygame.KMOD_NUM | pygame.KMOD_MODE) == pygame.KMOD_NONE):
-                        self._append_custom_event(code, e, mapped_events)
-                    else:
-                        mapped_events.append(e)
+                        self._append_custom_event(code, e, events)
+
                 case pygame.KEYUP:
                     self._release(e)
 
                 case pygame.JOYBUTTONDOWN:
                     code = self.joypad_keys_commands.get(e.button)
                     if code is not None:
-                        self._append_custom_event(code, e, mapped_events)
-                    else:
-                        mapped_events.append(e)
+                        self._append_custom_event(code, e, events)
                 case pygame.JOYBUTTONUP:
                     self._release(e)
 
                 case pygame.JOYHATMOTION:
                     code = self._dir_to_code(e.value)
                     if code is not None:
-                        self._append_custom_event(code, e, mapped_events)
+                        self._append_custom_event(code, e, events)
                     else:
                         self._release(e)
 
@@ -150,18 +146,15 @@ class Controls:
                         if code is None:
                             self._release(e)
                     else:
-                        mapped_events.append(e)
+                        events.append(e)
                     if code is not None:
-                        self._append_custom_event(code, e, mapped_events)
-                case _:
-                    mapped_events.append(e)
-        return mapped_events
+                        self._append_custom_event(code, e, events)
 
     def update_controls(self) -> None:
         current_events = pygame.event.get()
         # Basic processing. Track release key
-        if len(current_events) > 0:
-            events = []
+        if current_events:
+            self.events.clear()
             for e in current_events:
                 match e.type:
                     case pygame.JOYDEVICEADDED:
@@ -175,12 +168,12 @@ class Controls:
                         self._release(e)
                     case pygame.JOYBUTTONUP:  # instance_id, button
                         self._release(e)
-                events.append(e)
+                self.events.append(e)
 
             # Map to custom events
-            self.events = self._apply_custom_events(events)
-        elif len(self.events) > 0:
-            self.events = []
+            self._apply_custom_events(self.events)
+        elif self.events:
+            self.events.clear()
 
         # Apply repeated key
         repeat_event = self._get_repeated_key()

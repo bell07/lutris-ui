@@ -6,6 +6,7 @@ from uiwidgets import UiWidget, Controls
 class UiApp(UiWidget):
     def __init__(self, controls: Controls, size_w: float = 0, size_h: float = 0,
                  fullscreen: bool = False, noframe: bool = False, **kwargs):
+        # noinspection PyArgumentEqualDefault
         super().__init__(parent=None, **kwargs)
         self.controls = controls
         self.is_interactive = True
@@ -67,7 +68,7 @@ class UiApp(UiWidget):
         self._detached_surface_changed = False
 
     def process_events(self, events: list, pos: (int, int) = None) -> None:
-        if len(events) == 0:
+        if not events:
             return
 
         for e in events:
