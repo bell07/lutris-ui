@@ -24,6 +24,7 @@ class Controls:
         self._timer2 = None  # Timer 2 since key was processed last time
         self._pressed_command = None
         self._pressed_event = None
+        self._last_axis = None
 
     @staticmethod
     def init_all_js() -> None:
@@ -58,8 +59,9 @@ class Controls:
             self._timer2 = None
             return True  # Pressed first time
 
-    def _release(self, release_event: pygame.event.Event) -> None:
-        if self._pressed_event is not None and self._is_same(release_event, self._pressed_event):
+    def _release(self, release_event: pygame.event.Event = None) -> None:
+        if self._pressed_event is None or release_event is None \
+                or self._is_same(release_event, self._pressed_event):
             self._pressed_command = None
             self._pressed_event = None
 
@@ -89,17 +91,27 @@ class Controls:
                                   {"command": self._pressed_command, "origin": self._pressed_event})
 
     @staticmethod
-    def _dir_to_code(vector: (float, float)) -> str:
+    def _dir_to_code(vector: (float, float)) -> (str, int):
         x, y = vector
-        press = 0.8  # Full press only
+        press = 0.1
+        command, value = None, 0
+
         if x <= -press:
-            return "LEFT"
+            command, value = "LEFT", -x
         if x >= press:
-            return "RIGHT"
+            command, value = "RIGHT", x
         if y >= press:
-            return "UP"
+            command, value = "UP", y
         if y <= -press:
-            return "DOWN"
+            command, value = "DOWN", -y
+
+        if value > 0.8:  # Pressed
+            return command, value
+
+        if value < 0.5:  # Released
+            return "RELEASE", 0
+
+        return None, 0  # Ignore, repeat allowed
 
     def _append_custom_event(self, command: str, event: pygame.event.Event, events: list):
         if any(e.type == Controls.COMMAND_EVENT for e in events):
@@ -109,6 +121,12 @@ class Controls:
             self._press(command, event)
 
     def _apply_custom_events(self, events: list) -> None:
+        axis = self._last_axis
+        axis_command = None
+        axis_command_value = 0
+        axis_command_event = None
+        axis_released = False
+
         for e in events:
             match e.type:
                 case pygame.KEYDOWN:
@@ -128,7 +146,7 @@ class Controls:
                     self._release(e)
 
                 case pygame.JOYHATMOTION:
-                    code = self._dir_to_code(e.value)
+                    code, value = self._dir_to_code(e.value)
                     if code is not None:
                         self._append_custom_event(code, e, events)
                     else:
@@ -136,18 +154,27 @@ class Controls:
 
                 case pygame.JOYAXISMOTION:
                     code = None
+                    value = 0
                     if e.axis == pygame.CONTROLLER_AXIS_LEFTX:
-                        code = self._dir_to_code([e.value, 0])
-                        if code is None:
-                            self._release(e)
+                        code, value = self._dir_to_code([e.value, 0])
                     elif e.axis == pygame.CONTROLLER_AXIS_LEFTY:
-                        code = self._dir_to_code([0, -e.value])
-                        if code is None:
-                            self._release(e)
-                    else:
-                        events.append(e)
+                        code, value = self._dir_to_code([0, -e.value])
                     if code is not None:
-                        self._append_custom_event(code, e, events)
+                        if code == "RELEASE" and (axis is None or e.axis == axis):
+                            axis_released = True
+                        elif value > axis_command_value:
+                            axis = e.axis
+                            axis_command = code
+                            axis_command_value = value
+                            axis_command_event = e
+                            axis_released = False
+
+        if axis_released is True:
+            self._release()
+            self._last_axis = None
+        elif axis_command is not None and self._last_axis != axis:
+            self._last_axis = axis
+            self._append_custom_event(axis_command, axis_command_event, events)
 
     def update_controls(self) -> None:
         self.events.clear()
