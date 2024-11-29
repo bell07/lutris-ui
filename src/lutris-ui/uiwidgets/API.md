@@ -65,6 +65,7 @@ Base widget class. This widget does not have own surface and draw into parent su
 | focus_child          | Widget()              | The child widget with focus                                                                                                               |                                                  |
 | bg_color             | pygame.Color()        | If set, the widget is filled with color before draw                                                                                       | Constructor parameter                            |
 | border_color         | pygame.Color()        | If set, the widget border is filled with color                                                                                            | Constructor parameter                            |
+| allowed_event_types  | list of event types   | If set, the list is enhanced by some additional event types. Only given event types are processed                                         | Constructor parameter                            |
 
 ### Methods
 

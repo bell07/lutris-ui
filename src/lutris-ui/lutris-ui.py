@@ -28,7 +28,9 @@ if __name__ == '__main__':
                        pygame.CONTROLLER_BUTTON_DPAD_UP: "UP",
                        pygame.CONTROLLER_BUTTON_DPAD_DOWN: "DOWN",
                        pygame.CONTROLLER_BUTTON_DPAD_LEFT: "LEFT",
-                       pygame.CONTROLLER_BUTTON_DPAD_RIGHT: "RIGHT"})
+                       pygame.CONTROLLER_BUTTON_DPAD_RIGHT: "RIGHT"},
+                   allowed_event_types=(pygame.MOUSEMOTION, pygame.MOUSEBUTTONUP, pygame.MOUSEBUTTONDOWN,
+                                        pygame.WINDOWSIZECHANGED, pygame.WINDOWRESTORED, pygame.QUIT))
     app = LutrisUiApp(ctr)
     app.run()
     Settings.save()

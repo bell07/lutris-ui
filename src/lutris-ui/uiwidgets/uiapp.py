@@ -18,6 +18,7 @@ class UiApp(UiWidget):
         self.fullscreen = fullscreen
         self.noframe = noframe
         self.init_display_settings()
+        pygame.event.set_allowed(controls.allowed_event_types)
         self.exit_loop = False
 
     def init_display_settings(self, reset: bool = False) -> None:

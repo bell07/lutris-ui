@@ -9,8 +9,9 @@ from settings import Settings
 class Controls:
     COMMAND_EVENT = pygame.event.custom_type()
 
-    def __init__(self, repeatable_commands: tuple = None, keyboard_commands: dict = None,
-                 joypad_keys_commands: dict = None):
+    def __init__(self, repeatable_commands: tuple = None, keyboard_commands: dict[int: str] = None,
+                 joypad_keys_commands: dict[int: str] = None,
+                 allowed_event_types: tuple = None):
         self.repeatable_commands = repeatable_commands or {}
         self.keyboard_commands = keyboard_commands or []
         self.joypad_keys_commands = joypad_keys_commands or []
@@ -25,6 +26,14 @@ class Controls:
         self._pressed_command = None
         self._pressed_event = None
         self._last_axis = None
+        self.allowed_event_types = allowed_event_types
+
+        if allowed_event_types is not None:
+            self.allowed_event_types += (pygame.JOYBUTTONDOWN, pygame.JOYBUTTONUP,
+                                         pygame.JOYAXISMOTION, pygame.JOYHATMOTION,
+                                         Controls.COMMAND_EVENT,
+                                         pygame.KEYDOWN, pygame.KEYUP,
+                                         pygame.JOYDEVICEADDED, pygame.JOYDEVICEREMOVED)
 
     @staticmethod
     def init_all_js() -> None:
