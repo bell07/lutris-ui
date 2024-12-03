@@ -156,7 +156,7 @@ class Controls:
 
                 case pygame.JOYHATMOTION:
                     code, value = self._dir_to_code(e.value)
-                    if code is not None:
+                    if code is not None and value == 1:
                         self._append_custom_event(code, e, events)
                     else:
                         self._release(e)
@@ -188,7 +188,7 @@ class Controls:
     def update_controls(self) -> None:
         self.events.clear()
         if self._pressed_command is None:
-            wait_event = pygame.event.wait(timeout=1000)
+            wait_event = pygame.event.wait(timeout=5000)
             if wait_event.type != pygame.NOEVENT:
                 self.events.append(wait_event)
         self.events += pygame.event.get()
