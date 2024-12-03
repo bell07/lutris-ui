@@ -9,6 +9,7 @@ import psutil
 class BaseModule:
     def __init__(self):
         self.pid = None
+        self.shutdown_sent_time = None
 
     def check_is_running(self) -> bool:
         # Check the launched command is still running
@@ -25,12 +26,17 @@ class BaseModule:
                     return True
             except psutil.NoSuchProcess:
                 self.pid = None
+                self.shutdown_sent_time = None
                 return False
 
     def shutdown(self, root_pid: int) -> bool:
+        if self.shutdown_sent_time is not None and (datetime.now() - self.shutdown_sent_time).total_seconds() < 1:
+            return True  # One kill command each second
+
         if self.pid is not None:
             try:
                 os.kill(self.pid, signal.SIGTERM)
+                self.shutdown_sent_time = datetime.now()
                 return True
             except ProcessLookupError:
                 pass
@@ -69,6 +75,10 @@ class LutrisModule(BaseModule):
                     self.pid = process.pid
         return super().check_is_running()
 
+    def shutdown(self, root_pid: int) -> bool:
+        # Do not kill the wrapper
+        return False
+
 
 class AnyModule(BaseModule):
     def shutdown(self, root_pid: int) -> bool:
@@ -88,10 +98,6 @@ class AnyModule(BaseModule):
 
 
 class SteamModule(BaseModule):
-    def __init__(self):
-        super().__init__()
-        self.shutdown_sent_time = None
-
     def shutdown(self, root_pid: int) -> bool:
         if root_pid is None:
             return False

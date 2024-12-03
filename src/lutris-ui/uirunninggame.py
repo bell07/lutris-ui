@@ -78,4 +78,3 @@ class UiGameIsRunningWidget(UiWidget):
         else:
             if self._kill_in_progress is True:
                 self.ldb.kill_running()
-            pygame.time.wait(270)
