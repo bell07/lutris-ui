@@ -1,5 +1,4 @@
 import os
-import signal
 import subprocess
 from datetime import datetime
 
@@ -30,16 +29,6 @@ class BaseModule:
                 return False
 
     def shutdown(self, root_pid: int) -> bool:
-        if self.shutdown_sent_time is not None and (datetime.now() - self.shutdown_sent_time).total_seconds() < 1:
-            return True  # One kill command each second
-
-        if self.pid is not None:
-            try:
-                os.kill(self.pid, signal.SIGTERM)
-                self.shutdown_sent_time = datetime.now()
-                return True
-            except ProcessLookupError:
-                pass
         return False
 
 
@@ -75,34 +64,35 @@ class LutrisModule(BaseModule):
                     self.pid = process.pid
         return super().check_is_running()
 
-    def shutdown(self, root_pid: int) -> bool:
-        # Do not kill the wrapper
-        return False
-
 
 class AnyModule(BaseModule):
     def shutdown(self, root_pid: int) -> bool:
         if root_pid is None:
             return False
-        root_process = psutil.Process(root_pid)
         try:
+            root_process = psutil.Process(root_pid)
             if root_process.is_running():
+                if self.shutdown_sent_time is not None:
+                    if (datetime.now() - self.shutdown_sent_time).total_seconds() < 10:
+                        return True  # Wait at least 2 Seconds for app shutdown
                 done = False
                 for child in root_process.children():
+                    print(f"Game shutdown ANY: send kill to {child.pid}")
                     child.kill()
+                    self.shutdown_sent_time = datetime.now()
                     done = True
                 return done
 
         except psutil.NoSuchProcess:
-            return False
+            return True
 
 
 class SteamModule(BaseModule):
     def shutdown(self, root_pid: int) -> bool:
         if root_pid is None:
             return False
-        root_process = psutil.Process(root_pid)
         try:
+            root_process = psutil.Process(root_pid)
             if root_process.is_running():
                 for child in root_process.children():
                     try:
@@ -111,7 +101,7 @@ class SteamModule(BaseModule):
                             if self.shutdown_sent_time is not None:
                                 if (datetime.now() - self.shutdown_sent_time).total_seconds() < 10:
                                     return True  # Wait at least 10 Seconds for Steam client shutdown
-
+                            print(f"Game shutdown Steam: call steam -shutdown")
                             subprocess.run(['steam', '-shutdown'])
                             self.shutdown_sent_time = datetime.now()
                             return True
@@ -119,7 +109,7 @@ class SteamModule(BaseModule):
                         pass
 
         except psutil.NoSuchProcess:
-            pass
+            return True
         return False
 
 
