@@ -59,18 +59,16 @@ class UiGameWidget(UiWidgetStatic):
             self.label_widget.text = self.name
             self.label_widget.set_changed()
 
-    def process_events(self, events: list, pos: (int, int) = None) -> None:
-        if pos is not None:
-            for e in events:
-                if e.type == pygame.MOUSEBUTTONUP and e.button == pygame.BUTTON_LEFT:
-                    if e.touch is False:
-                        self.get_root_widget().launch(self.data)
-                    else:
-                        if self.is_focus is True:
-                            self.get_root_widget().launch(self.data)
-                        else:
-                            self.set_focus()
-                    return
+    def process_event_pos(self, event: pygame.event.Event, pos: (int, int)) -> bool:
+        if event.type == pygame.MOUSEBUTTONUP and event.button == pygame.BUTTON_LEFT:
+            if event.touch is False:
+                self.get_root_widget().launch(self.data)
+            else:
+                if self.is_focus is True:
+                    self.get_root_widget().launch(self.data)
+                else:
+                    self.set_focus()
+            return True
 
     def set_focus(self, focus: bool = True) -> None:
         if focus == self.is_focus:
@@ -198,17 +196,16 @@ class UiGameViewport(UiWidgetViewport):
         if widget_rect.y + widget_rect.h > self.shift_y + viewport_h:
             self.shift_y = widget_rect.y + widget_rect.h - viewport_h
 
-    def process_events(self, events: list, pos: (int, int) = None) -> None:
-        super().process_events(events, pos)
-
-        # Scroll after other events processed
-        for e in events:
-            match e.type:
-                case Controls.COMMAND_EVENT:
-                    self.select_game(e.command)
-                case pygame.MOUSEWHEEL:
-                    self.shift_y = self.shift_y - (e.y * GAME_WIDGET_HEIGHT / 4)
-                    self.set_changed()
+    def process_event_focus(self, event: pygame.event.Event) -> bool:
+        match event.type:
+            case Controls.COMMAND_EVENT:
+                self.select_game(event.command)
+                return True
+            case pygame.MOUSEWHEEL:
+                self.shift_y = self.shift_y - (event.y * GAME_WIDGET_HEIGHT / 4)
+                self.set_changed()
+                return True
+        return super().process_event_focus(event)
 
     def draw(self) -> None:
         if self.is_changed() or self.is_parent_changed():

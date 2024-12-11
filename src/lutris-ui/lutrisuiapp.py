@@ -34,23 +34,23 @@ class LutrisUiApp(UiApp):
         self.game_is_running = UiGameIsRunningWidget(self, border_all=10, border_color="Grey")
         self._hide_on_launch = Settings("play").get("hide_on_launch", False)
 
-    def process_events(self, events: list, pos: (int, int) = None) -> None:
-        for e in events:
-            if e.type == pygame.KEYDOWN and e.key == pygame.K_RETURN and e.mod == pygame.KMOD_LALT:
-                self.fullscreen = not self.fullscreen
-                self.init_display_settings(reset=True)
-                return
-            if e.type == pygame.KEYDOWN and e.key == pygame.K_RETURN and e.mod == pygame.KMOD_RALT:
-                self.noframe = not self.noframe
-                self.fullscreen = False
-                self.init_display_settings(reset=True)
-                return
-            if e.type == pygame.KEYDOWN and e.key == pygame.K_UP and e.mod == pygame.KMOD_LALT:
-                self.init_display_settings()
-            if e.type == pygame.KEYDOWN and e.key == pygame.K_DOWN and e.mod == pygame.KMOD_LALT:
-                pygame.display.iconify()
-                return
-        super().process_events(events, pos)
+    def process_event_focus(self, event: pygame.event.Event) -> bool:
+        if event.type == pygame.KEYDOWN and event.key == pygame.K_RETURN and event.mod == pygame.KMOD_LALT:
+            self.fullscreen = not self.fullscreen
+            self.init_display_settings(reset=True)
+            return True
+        if event.type == pygame.KEYDOWN and event.key == pygame.K_RETURN and event.mod == pygame.KMOD_RALT:
+            self.noframe = not self.noframe
+            self.fullscreen = False
+            self.init_display_settings(reset=True)
+            return True
+        if event.type == pygame.KEYDOWN and event.key == pygame.K_UP and event.mod == pygame.KMOD_LALT:
+            self.init_display_settings()
+            return True
+        if event.type == pygame.KEYDOWN and event.key == pygame.K_DOWN and event.mod == pygame.KMOD_LALT:
+            pygame.display.iconify()
+            return True
+        return super().process_event_focus(event)
 
     def launch(self, game_data) -> None:
         self.ldb.launch(game_data)
@@ -64,4 +64,4 @@ class LutrisUiApp(UiApp):
         self.game_is_running.set_visible(False)
         if self._hide_on_launch is True:
             self.init_display_settings()
-        self.games_viewport.set_focus(True)
+        self.games_viewport.set_focus()

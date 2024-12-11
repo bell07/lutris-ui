@@ -5,25 +5,27 @@ from uiwidgets import UiWidget, UiWidgetStatic, DynamicTypes, UiWidgetTextBlock,
 
 
 class UiRunningGameWidget(UiGameWidget):
-    def process_events(self, events: list, pos: (int, int) = None) -> None:
-        pass
+    def process_event_focus(self, event: pygame.event.Event):
+        return False
+
+    def process_event_pos(self, event: pygame.event.Event, pos: (int, int)):
+        return False
 
     def set_focus(self, focus: bool = True) -> None:
         pass
 
 
 class UiTerminateGame(UiWidgetTextBlock):
-    def process_events(self, events: list, pos: (int, int) = None) -> None:
-        for e in events:
-            match e.type:
-                case pygame.MOUSEBUTTONUP:
-                    if e.button == pygame.BUTTON_LEFT:
-                        self.get_root_widget().game_is_running.set_kill_running()
-                        return
-                case Controls.COMMAND_EVENT:
-                    if e.command == "ENTER" or e.command == "EXIT":
-                        self.get_root_widget().game_is_running.set_kill_running()
-                        return
+    def process_event_focus(self, event: pygame.event.Event) -> bool:
+        match event.type:
+            case pygame.MOUSEBUTTONUP:
+                if event.button == pygame.BUTTON_LEFT:
+                    self.get_root_widget().game_is_running.set_kill_running()
+                    return True
+            case Controls.COMMAND_EVENT:
+                if event.command == "ENTER" or event.command == "EXIT":
+                    self.get_root_widget().game_is_running.set_kill_running()
+                    return True
 
 
 class UiGameIsRunningWidget(UiWidget):

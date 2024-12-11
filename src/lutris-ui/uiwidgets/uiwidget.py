@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from pygame import Surface, Rect, Color, constants, draw
+from pygame.event import Event
 
 from uiwidgets import DynamicRect
 
@@ -240,19 +241,18 @@ class UiWidget:
                     return None, None
         return None, None
 
-    def process_events(self, events: list, pos: (int, int) = None) -> None:
-        if pos is not None:  # Pointed events
-            pointed_widget, relative_pos = self.get_child_by_pos(pos)
-            if pointed_widget is not None:
-                for e in events:  # Select child if mouse buttons 1-3 is pressed
-                    if e.type == constants.MOUSEBUTTONUP and e.button <= 3 and e.touch is False:
-                        pointed_widget.set_focus()
-                pointed_widget.process_events(events, relative_pos)
+    def process_event_focus(self, event: Event) -> bool:
+        if self.focus_child is not None \
+                and self.focus_child.is_visible is True and self.focus_child.is_interactive is True:
+            return self.focus_child.process_event_focus(event)
 
-        else:  # Pointless events
-            if self.focus_child is not None \
-                    and self.focus_child.is_visible is True and self.focus_child.is_interactive is True:
-                self.focus_child.process_events(events)
+    def process_event_pos(self, event: Event, pos: (int, int)) -> bool:
+        pointed_widget, relative_pos = self.get_child_by_pos(event.pos)
+        if pointed_widget is not None:
+            # Change focus on mouse button press
+            if event.type == constants.MOUSEBUTTONUP and event.button <= 3 and event.touch is False:
+                pointed_widget.set_focus()
+            return pointed_widget.process_event_pos(event, relative_pos)
 
     def process_tick(self) -> None:
         if self.widgets is None:

@@ -98,7 +98,8 @@ Base widget class. This widget does not have own surface and draw into parent su
 | remove_child(widget: UiWidget)                                            | Disable and remove the child widget                                                                                                                                                              |
 | get_widget_collide_point(widget: UiWidget, pos: (int, int)) -> (int, int) | Check if given pos is inside the widget. Return relative position inside the widget. In case of pointed top or left borders the value is negative                                                |
 | get_child_by_pos(pos: (int, int)) -> (UiWidget, (int, int))               | Check all visible childs for position. Search is in reverse order, to get the widget from top of the widget stack if widgets overlaps                                                            |
-| process_events(events: list, pos: (int, int) = None)                      | Called from run() method to deliver events recursively. Can ber redefined to add own events handling. The super().process_events() needs to be called to deliver events to the childs            |
+| process_event_focus(event)                                                | If pointless event (eg button press) appears, this method is called. THe method pass the event up to focus childs                                                                                |
+| process_event_pos(event, pos: (int, int))                                 | If pointed event (eg mouse or touch) appears, this method is called. The method search for pointed child and pass the event to the child                                                         |
 | process_tick()                                                            | Is called each game step for own logic recursively.Can ber redefined to add own game step logic. The super().process_tick() needs to be called to trigger the children widgets logic             | 
 
 ## UiWidgetStatic
@@ -138,12 +139,16 @@ At this point only the UiApp specific attributes and methods are mentioned.
 
 ### Methods
 
-| Method                                               | Reason                                                                                               |
-|------------------------------------------------------|------------------------------------------------------------------------------------------------------|
-| init_display_settings(reset: bool = False)           | Called on application init. Can be used to show window again after iconify. Used to toggle "noframe" |
-| process_events(events: list, pos: (int, int) = None) | Handle for EXIT command, Window resize and get the first position for pointable events               |
-| draw()                                               | Draw all widgets recursively. pygame.display.flip() only if anything updated                         | 
-| run()                                                | Main loop with update_controls(), process_tick(), process_events(), draw() and game_tick()           |
+| Method                                     | Reason                                                                                               |
+|--------------------------------------------|------------------------------------------------------------------------------------------------------|
+| init_display_settings(reset: bool = False) | Called on application init. Can be used to show window again after iconify. Used to toggle "noframe" |
+| process_events(events: list)               | Dispatch events into process_event_focus() and process_event_pos()                                   |
+| process_event_focus(event)                 | Handle for EXIT command and Window resize                                                            |
+
+| draw()                                               | Draw all widgets recursively. pygame.display.flip() only if
+anything updated |
+| run()                                                | Main loop with update_controls(), process_tick(),
+process_events(), draw() and game_tick()           |
 
 Other methods overrides the UiWidget definitions because this widget is root, means it does not have parent widget.
 
@@ -204,7 +209,7 @@ area content. The Port can be assigned to UiWidgetViewportContainer using set_vi
 | get_surface(with_borders: bool = False) -> pygame.Surface | Get the viewport surface including invisible area parts                                       |
 | adjust_shift()                                            | Check if remaining area is fully visible after shift. scroll back if right/bottom is reached  |  
 | draw()                                                    | draw childs and blit the visible area into parent surface                                     |
-| process_events(events: list, pos: (int, int) = None)      | Handle touch drag for scrolling. do not pass events to childs if scrolling was happens        |
+| process_event_pos(event, pos: (int, int) = None)          | Handle touch drag for scrolling                                                               |
 
 ## UiWidgetsScrollbar
 
@@ -223,12 +228,12 @@ Scrollbar is implemented for usage in UiWidgetViewportContainer
 
 ### Methods
 
-| Method                                               | Reason                                                                               |
-|------------------------------------------------------|--------------------------------------------------------------------------------------|
-| adjust_scrollbar_by_viewport()                       | Adjust scrollbar attributes from parent_widget.viewport_widget size and shift values | 
-| draw()                                               | if viewport_widget was updated, call adjust_scrollbar_by_viewport() before draw      |
-| compose(surface: pygame.Surface) -> bool             | Compose the bar into surface                                                         |
-| process_events(events: list, pos: (int, int) = None) | Handle scroll actions if the scrollbar is drawn using mouse or touchscreen           |
+| Method                                    | Reason                                                                               |
+|-------------------------------------------|--------------------------------------------------------------------------------------|
+| adjust_scrollbar_by_viewport()            | Adjust scrollbar attributes from parent_widget.viewport_widget size and shift values | 
+| draw()                                    | if viewport_widget was updated, call adjust_scrollbar_by_viewport() before draw      |
+| compose(surface: pygame.Surface) -> bool  | Compose the bar into surface                                                         |
+| process_event_pos(event, pos: (int, int)) | Handle scroll actions if the scrollbar is drawn using mouse or touchscreen           |
 
 # Advanced
 

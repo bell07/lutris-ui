@@ -70,20 +70,26 @@ class UiApp(UiWidget):
         super().unset_changed()
         self._detached_surface_changed = False
 
-    def process_events(self, events: list, pos: (int, int) = None) -> None:
+    def process_event_focus(self, event: pygame.event.Event) -> bool:
+        if event.type in (pygame.WINDOWSIZECHANGED, pygame.WINDOWRESTORED):
+            self.set_changed()
+            return True
+        elif event.type == pygame.QUIT or (event.type == Controls.COMMAND_EVENT and event.command == "EXIT"):
+            self.exit_loop = True
+            return True
+        return super().process_event_focus(event)
+
+    def process_events(self, events: list) -> None:
         if not events:
             return
 
         for e in events:
-            if e.type in (pygame.WINDOWSIZECHANGED, pygame.WINDOWRESTORED):
-                self.set_changed()
-                return
-            elif e.type == pygame.QUIT or (e.type == Controls.COMMAND_EVENT and e.command == "EXIT"):
-                self.exit_loop = True
-                return
-            elif pos is None and e.type in (pygame.MOUSEMOTION, pygame.MOUSEBUTTONUP, pygame.MOUSEBUTTONDOWN):
-                pos = tuple(e.pos)
-        super().process_events(events, pos)
+            if e.type in (pygame.MOUSEMOTION, pygame.MOUSEBUTTONUP, pygame.MOUSEBUTTONDOWN):
+                if self.process_event_pos(e, e.pos) is True:
+                    break
+            else:
+                if self.process_event_focus(e) is True:
+                    break
 
     def draw(self) -> None:
         super().draw()

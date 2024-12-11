@@ -44,7 +44,7 @@ class UiWidgetsScrollbar(UiWidget):
             if self.bar_value >= self.max_value:
                 self.set_visible(False)
             else:
-                self.set_visible(True)
+                self.set_visible()
 
     def draw(self) -> None:
         if self.parent_widget.viewport_widget.updated:
@@ -68,19 +68,18 @@ class UiWidgetsScrollbar(UiWidget):
                              border_radius=int(self.scrollbar_width / 2))
         return True
 
-    def process_events(self, events: list, pos: (int, int) = None) -> None:
-        for e in events:
-            match e.type:
-                case pygame.MOUSEMOTION:
-                    if pygame.BUTTON_LEFT in e.buttons:
-                        viewport_widget = self.parent_widget.viewport_widget
-                        if self.scrollbar_is_horizontal is True:
-                            viewport_widget.shift_x = viewport_widget.shift_x + (
-                                    e.rel[0] / self.bar_value * self.max_value)
-                        else:
-                            viewport_widget.shift_y = viewport_widget.shift_y + (
-                                    e.rel[1] / self.bar_value * self.max_value)
-                        viewport_widget.set_changed()
+    def process_event_pos(self, event: pygame.event.Event, pos: (int, int)) -> bool:
+        if event.type == pygame.MOUSEMOTION:
+            if pygame.BUTTON_LEFT in event.buttons:
+                viewport_widget = self.parent_widget.viewport_widget
+                if self.scrollbar_is_horizontal is True:
+                    viewport_widget.shift_x = viewport_widget.shift_x + (
+                            event.rel[0] / self.bar_value * self.max_value)
+                else:
+                    viewport_widget.shift_y = viewport_widget.shift_y + (
+                            event.rel[1] / self.bar_value * self.max_value)
+                viewport_widget.set_changed()
+                return True
 
 
 class UiWidgetViewport(UiWidget):
@@ -176,18 +175,14 @@ class UiWidgetViewport(UiWidget):
         if widget_rect.collidepoint(shift_pos):
             return shift_pos[0] - widget_rect.x, shift_pos[1] - widget_rect.y
 
-    def process_events(self, events: list, pos: (int, int) = None) -> None:
-        scrolled = False
+    def process_event_pos(self, event: pygame.event.Event, pos: (int, int)) -> bool:
+        if event.type == pygame.MOUSEMOTION and event.touch is True:
+            self.shift_x = self.shift_x + (event.rel[0] * 5)
+            self.shift_y = self.shift_y - (event.rel[1] * 5)
+            self.set_changed()
+            return True
 
-        # vertical scrollbar is pointed
-        for e in events:
-            if e.type == pygame.MOUSEMOTION and e.touch is True:
-                self.shift_x = self.shift_x + (e.rel[0] * 5)
-                self.shift_y = self.shift_y - (e.rel[1] * 5)
-                self.set_changed()
-                scrolled = True
-        if scrolled is False:
-            super().process_events(events, pos)
+        return super().process_event_pos(event, pos)
 
 
 class UiWidgetViewportContainer(UiWidget):
