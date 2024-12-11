@@ -59,6 +59,11 @@ class UiGameWidget(UiWidgetStatic):
             self.label_widget.text = self.name
             self.label_widget.set_changed()
 
+    def process_event_focus(self, event: pygame.event.Event) -> bool:
+        if event.type == Controls.COMMAND_EVENT and event.command == "ENTER":
+            self.get_root_widget().launch(self.data)
+            return True
+
     def process_event_pos(self, event: pygame.event.Event, pos: (int, int)) -> bool:
         if event.type == pygame.MOUSEBUTTONUP and event.button == pygame.BUTTON_LEFT:
             if event.touch is False:
@@ -145,17 +150,10 @@ class UiGameViewport(UiWidgetViewport):
                     self.remove_child(widget)
                     self.game_widgets.pop(old_idx)
 
-    def select_game(self, command: str) -> None:
-        if command == "ENTER" and isinstance(self.focus_child, UiGameWidget):
-            self.get_root_widget().launch(self.focus_child.data)
-            return
-
+    def select_game(self, command: str) -> bool:
         selected_game_index = 0
-        if self.focus_child is not None:
-            for idx, game in enumerate(self.game_widgets):
-                if game == self.focus_child:
-                    selected_game_index = idx
-                    break
+        if self.focus_child:
+            selected_game_index = self.game_widgets.index(self.focus_child)
 
         match command:
             case "TOP":
@@ -174,10 +172,7 @@ class UiGameViewport(UiWidgetViewport):
                 self.ldb.data_changed = True
                 self.set_changed()
             case _:
-                for idx, widget in enumerate(self.game_widgets):
-                    if widget.name == command:
-                        selected_game_index = idx
-                        break
+                return False
 
         if selected_game_index < 0:
             selected_game_index = 0
@@ -196,11 +191,13 @@ class UiGameViewport(UiWidgetViewport):
         if widget_rect.y + widget_rect.h > self.shift_y + viewport_h:
             self.shift_y = widget_rect.y + widget_rect.h - viewport_h
 
+        return True
+
     def process_event_focus(self, event: pygame.event.Event) -> bool:
         match event.type:
             case Controls.COMMAND_EVENT:
-                self.select_game(event.command)
-                return True
+                if self.select_game(event.command) is True:
+                    return True
             case pygame.MOUSEWHEEL:
                 self.shift_y = self.shift_y - (event.y * GAME_WIDGET_HEIGHT / 4)
                 self.set_changed()

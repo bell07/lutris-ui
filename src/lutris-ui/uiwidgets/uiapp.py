@@ -71,13 +71,16 @@ class UiApp(UiWidget):
         self._detached_surface_changed = False
 
     def process_event_focus(self, event: pygame.event.Event) -> bool:
+        event_done = super().process_event_focus(event)
+        if event_done is True:
+            return True
+
         if event.type in (pygame.WINDOWSIZECHANGED, pygame.WINDOWRESTORED):
             self.set_changed()
             return True
         elif event.type == pygame.QUIT or (event.type == Controls.COMMAND_EVENT and event.command == "EXIT"):
             self.exit_loop = True
             return True
-        return super().process_event_focus(event)
 
     def process_events(self, events: list) -> None:
         if not events:

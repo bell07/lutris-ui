@@ -247,7 +247,7 @@ class UiWidget:
             return self.focus_child.process_event_focus(event)
 
     def process_event_pos(self, event: Event, pos: (int, int)) -> bool:
-        pointed_widget, relative_pos = self.get_child_by_pos(event.pos)
+        pointed_widget, relative_pos = self.get_child_by_pos(pos)
         if pointed_widget is not None:
             # Change focus on mouse button press
             if event.type == constants.MOUSEBUTTONUP and event.button <= 3 and event.touch is False:

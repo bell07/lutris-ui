@@ -16,16 +16,15 @@ class UiRunningGameWidget(UiGameWidget):
 
 
 class UiTerminateGame(UiWidgetTextBlock):
+    def process_event_pos(self, event: pygame.event.Event, pos: (int, int)) -> bool:
+        if event.type == pygame.MOUSEBUTTONUP and event.button == pygame.BUTTON_LEFT:
+            self.get_root_widget().game_is_running.set_kill_running()
+            return True
+
     def process_event_focus(self, event: pygame.event.Event) -> bool:
-        match event.type:
-            case pygame.MOUSEBUTTONUP:
-                if event.button == pygame.BUTTON_LEFT:
-                    self.get_root_widget().game_is_running.set_kill_running()
-                    return True
-            case Controls.COMMAND_EVENT:
-                if event.command == "ENTER" or event.command == "EXIT":
-                    self.get_root_widget().game_is_running.set_kill_running()
-                    return True
+        if event.type == Controls.COMMAND_EVENT and (event.command == "BACK" or event.command == "EXIT"):
+            self.get_root_widget().game_is_running.set_kill_running()
+            return True
 
 
 class UiGameIsRunningWidget(UiWidget):
