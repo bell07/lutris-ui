@@ -23,7 +23,8 @@ class UiApp(UiWidget):
         self.exit_loop = False
 
     def init_display_settings(self, reset: bool = False) -> None:
-        pygame.init()
+        pygame.display.init()
+        pygame.font.init()
         if self.fullscreen is True:
             flags = pygame.RESIZABLE + pygame.FULLSCREEN
             size = (0, 0)
