@@ -106,8 +106,8 @@ class DynamicRect:
 
         w, h, x, y = 0, 0, 0, 0
         assert self.parent_w is not None and self.parent_h is not None, "Parent size required for rect calculations"
-        assert self.size_w_type != DynamicTypes.TYPE_CENTER\
-               and self.size_h_type != DynamicTypes.TYPE_CENTER, "TYPE_CENTER not supported for size"
+        assert (self.size_w_type != DynamicTypes.TYPE_CENTER
+                and self.size_h_type != DynamicTypes.TYPE_CENTER), "TYPE_CENTER not supported for size"
         max_w = self.parent_w
         max_h = self.parent_h
 
@@ -166,11 +166,11 @@ class DynamicRect:
 
         self._rect_with_borders = Rect(x, y, w, h)
 
-        x = x + self.border_left
+        x += self.border_left
         if x > max_w:
             x = max_w
 
-        y = y + self.border_top
+        y += self.border_top
         if y > max_h:
             y = max_h
 

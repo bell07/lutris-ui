@@ -33,7 +33,7 @@ class UiWidgetTextBlock(UiWidgetStatic):
                     x = 0
                     y += line_height  # Start on new row.
                     current_line = []
-                    all_lines_max_height = all_lines_max_height + line_height
+                    all_lines_max_height += line_height
 
                 current_line.append([word_surface, x, y])
                 if word_height > line_height:
@@ -43,7 +43,7 @@ class UiWidgetTextBlock(UiWidgetStatic):
             x = 0
             y += line_height
             current_line = []
-            all_lines_max_height = all_lines_max_height + line_height
+            all_lines_max_height += line_height
 
         if self.text_centered_y is True and all_lines_max_height < surface_max_height:
             shift_y = (surface_max_height - all_lines_max_height) / 2

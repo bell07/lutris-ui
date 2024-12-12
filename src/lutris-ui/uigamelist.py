@@ -22,7 +22,9 @@ class UiGameWidget(UiWidgetStatic):
         else:
             self.name = game_data["name"]
             self.data = game_data
-        self.label_widget = UiWidgetTextBlock(parent=self, bg_color=pygame.Color(255, 255, 255), alpha=128,
+        self.label_widget = UiWidgetTextBlock(parent=self, bg_color=pygame.Color(255, 255, 255, 100),
+                                              text_color=pygame.Color(50, 50, 50),
+                                              surface_flags=pygame.SRCALPHA,
                                               text_centered_x=True, text_centered_y=True,
                                               pos_x_type=DynamicTypes.TYPE_CENTER,
                                               pos_y_type=DynamicTypes.TYPE_PIXEL_REVERSE, size_h=TEXT_AREA_HEIGHT)

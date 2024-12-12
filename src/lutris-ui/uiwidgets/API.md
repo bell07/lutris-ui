@@ -109,9 +109,10 @@ own surface requires less compose() actions and allow to set alpha in surface
 
 ### Attributes
 
-| Attribute | Type  | Reason                           | Value is set          |
-|-----------|-------|----------------------------------|-----------------------|
-| alpha     | 0-255 | Is applied to the widget surface | Constructor parameter |
+| Attribute     | Type  | Reason                                  | Value is set          |
+|---------------|-------|-----------------------------------------|-----------------------|
+| alpha         | 0-255 | Is applied to the widget surface        | Constructor parameter |
+| surface_flags | int   | Flags passed to widget surface creation | Constructor parameter | 
 
 ### Methods
 
