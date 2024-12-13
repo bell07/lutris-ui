@@ -34,6 +34,7 @@ class Controls:
                                          Controls.COMMAND_EVENT,
                                          pygame.KEYDOWN, pygame.KEYUP,
                                          pygame.JOYDEVICEADDED, pygame.JOYDEVICEREMOVED)
+        self.init_all_js()
 
     @staticmethod
     def init_all_js() -> None:
