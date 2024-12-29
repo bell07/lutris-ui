@@ -19,6 +19,7 @@ class UiWidgetsScrollbar(UiWidget):
         self.current_value = 0
         self.bar_value = 0
         self.max_value = 0
+        self._drag_pos = None
 
     def adjust_scrollbar_by_viewport(self):
         viewport_widget = self.parent_widget.viewport_widget
@@ -69,17 +70,23 @@ class UiWidgetsScrollbar(UiWidget):
         return True
 
     def process_event_pos(self, event: pygame.event.Event, pos: (int, int)) -> bool:
-        if event.type == pygame.MOUSEMOTION:
-            if pygame.BUTTON_LEFT in event.buttons:
-                viewport_widget = self.parent_widget.viewport_widget
-                if self.scrollbar_is_horizontal is True:
-                    viewport_widget.shift_x = viewport_widget.shift_x + (
-                            event.rel[0] / self.bar_value * self.max_value)
-                else:
-                    viewport_widget.shift_y = viewport_widget.shift_y + (
-                            event.rel[1] / self.bar_value * self.max_value)
-                viewport_widget.set_changed()
-                return True
+        match event.type:
+            case pygame.MOUSEBUTTONDOWN:
+                if pygame.BUTTON_LEFT == event.button:
+                    self._drag_pos = event.pos
+            case pygame.MOUSEBUTTONUP:
+                if pygame.BUTTON_LEFT == event.button:
+                    self._drag_pos = None
+            case pygame.MOUSEMOTION:
+                if pygame.BUTTON_LEFT in event.buttons:
+                    viewport_widget = self.parent_widget.viewport_widget
+                    if self.scrollbar_is_horizontal is True:
+                        viewport_widget.shift_x += (event.pos[0] - self._drag_pos[0]) * self.max_value / self.bar_value
+                    else:
+                        viewport_widget.shift_y += (event.pos[1] - self._drag_pos[1]) * self.max_value / self.bar_value
+                    self._drag_pos = event.pos
+                    viewport_widget.set_changed()
+                    return True
 
 
 class UiWidgetViewport(UiWidget):
