@@ -79,13 +79,16 @@ class UiWidgetsScrollbar(UiWidget):
                     self._drag_pos = None
             case pygame.MOUSEMOTION:
                 if pygame.BUTTON_LEFT in event.buttons:
-                    viewport_widget = self.parent_widget.viewport_widget
-                    if self.scrollbar_is_horizontal is True:
-                        viewport_widget.shift_x += (event.pos[0] - self._drag_pos[0]) * self.max_value / self.bar_value
-                    else:
-                        viewport_widget.shift_y += (event.pos[1] - self._drag_pos[1]) * self.max_value / self.bar_value
+                    if self._drag_pos is not None:
+                        viewport_widget = self.parent_widget.viewport_widget
+                        if self.scrollbar_is_horizontal is True:
+                            viewport_widget.shift_x += (event.pos[0] - self._drag_pos[0]) \
+                                                       * self.max_value / self.bar_value
+                        else:
+                            viewport_widget.shift_y += (event.pos[1] - self._drag_pos[1]) \
+                                                       * self.max_value / self.bar_value
+                        viewport_widget.set_changed()
                     self._drag_pos = event.pos
-                    viewport_widget.set_changed()
                     return True
 
 
