@@ -1,9 +1,10 @@
+from __future__ import annotations
+
 import os
 import subprocess
 
 from lutris import settings
-from lutris.database import games, categories
-
+from lutris.database import categories, games
 from settings import Settings
 from shutdown_handler import ShutdownManager
 
@@ -11,11 +12,13 @@ from shutdown_handler import ShutdownManager
 class LutrisDb:
     def __init__(self):
         list_settings = Settings("gamelist")
-        self._sort_key = list_settings.get("sort_attribute", "lastplayed")  # sortname, lastplayed, installed_at
-        self._sort_reverse = list_settings.get("reverse_sort", True)
+        self._sort_key: str = str(
+            list_settings.get("sort_attribute", "lastplayed")
+        )  # sortname, lastplayed, installed_at
+        self._sort_reverse: bool = bool(list_settings.get("reverse_sort", True))
         self.data_changed = True
-        self.games_data = []
-        self.shutdown_manager = None
+        self.games_data = [str, any]
+        self.shutdown_manager: ShutdownManager | None
         self.terminate_in_proces = False
 
     def get_games(self) -> tuple[list, bool]:
@@ -24,19 +27,21 @@ class LutrisDb:
         self.games_data.clear()
         for game_data in games.get_games(filters={"installed": "1"}):
             game_categories = categories.get_categories_in_game(game_data["id"])
-            if '.hidden' in game_categories:
+            if ".hidden" in game_categories:
                 continue
             data = game_data.copy()
             data["coverart"] = self.get_cover_art(game_data)
             self.games_data.append(data)
 
         # Note:  fallback "0" is for non-existing lastplayed value. This should not affect sorting by name
-        self.games_data.sort(key=lambda game: game.get(self._sort_key) or 0, reverse=self._sort_reverse)
+        self.games_data.sort(
+            key=lambda game: game.get(self._sort_key) or 0, reverse=self._sort_reverse
+        )
         self.data_changed = False
         return self.games_data, True
 
     @staticmethod
-    def get_cover_art(game: dict) -> str:
+    def get_cover_art(game: dict) -> str | None:
         image_path = os.path.join(settings.COVERART_PATH, f"{game['slug']}.jpg")
         if os.path.exists(image_path):
             return image_path
@@ -46,8 +51,15 @@ class LutrisDb:
 
     def launch(self, game_data: dict) -> None:
         print(f"Launch Lutris session for {game_data['name']}")
-        p = subprocess.Popen(["env", "LUTRIS_SKIP_INIT=1", "lutris", f"lutris:rungameid/{game_data['id']}"],
-                             start_new_session=True)
+        p = subprocess.Popen(
+            [
+                "env",
+                "LUTRIS_SKIP_INIT=1",
+                "lutris",
+                f"lutris:rungameid/{game_data['id']}",
+            ],
+            start_new_session=True,
+        )
         self.shutdown_manager = ShutdownManager(p.pid)
         self.terminate_in_proces = False
 
@@ -61,4 +73,5 @@ class LutrisDb:
         return is_running
 
     def kill_running(self) -> None:
-        self.shutdown_manager.shutdown_game()
+        if self.shutdown_manager:
+            self.shutdown_manager.shutdown_game()

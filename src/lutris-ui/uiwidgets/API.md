@@ -37,7 +37,7 @@ Basically the class is used in UiApp.run() method internally
 ### How to Use:
 
 ```
-    ctr = Controls(repeatable_commands=(...),
+    ctr = Controls(repeatable_commands=[...],
                   keyboard_commands={...},
                   joypad_keys_commands={...})
     app = LutrisUiApp(ctr)
@@ -74,9 +74,9 @@ Base widget class. This widget does not have own surface and draw into parent su
 | set_parent_surface(parent: UiWidget)                                      | Called once on init in constructor and should not be called again                                                                                                                                |
 | get_root_widget()                                                         | Search parents recursively to get the root widget                                                                                                                                                |
 | get_parent_surface() -> pygame.Surface                                    | Get the parent widget surface to draw into                                                                                                                                                       |
-| get_parent_size() -> (int, int)                                           | Get the size of the parent surface. Uses parent_widget.get_size() with exception in UiApp()                                                                                                      |
+| get_parent_size() -> tuple[int, int]                                           | Get the size of the parent surface. Uses parent_widget.get_size() with exception in UiApp()                                                                                                      |
 | get_rect(with_borders: bool = False) -> pygame.Rect                       | Get the widget coordinates, inside or outside borders, calculated in DynamicRect                                                                                                                 |
-| get_size(with_borders: bool = False) -> (int, int)                        | Just wrapper for get_rect().size                                                                                                                                                                 |
+| get_size(with_borders: bool = False) -> tuple[int, int]                        | Just wrapper for get_rect().size                                                                                                                                                                 |
 | set_pos(**kwargs)                                                         | Set position parameters in DynamicRect object                                                                                                                                                    |
 | set_size(**kwargs)                                                        | Set sizing parameters in DynamicRect object                                                                                                                                                      |
 | set_border(border_color: Color = None, **kwargs)                          | Set border color and border sizing in DynamicRect object                                                                                                                                         | 
@@ -96,10 +96,10 @@ Base widget class. This widget does not have own surface and draw into parent su
 | draw()                                                                    | Used internally from run() method. Check for changes and draw bg_color, compose() and child.draw() recursively.                                                                                  |
 | add_child(widget: UiWidget)                                               | Used internally. Called in child's constructor.                                                                                                                                                  |
 | remove_child(widget: UiWidget)                                            | Disable and remove the child widget                                                                                                                                                              |
-| get_widget_collide_point(widget: UiWidget, pos: (int, int)) -> (int, int) | Check if given pos is inside the widget. Return relative position inside the widget. In case of pointed top or left borders the value is negative                                                |
-| get_child_by_pos(pos: (int, int)) -> (UiWidget, (int, int))               | Check all visible childs for position. Search is in reverse order, to get the widget from top of the widget stack if widgets overlaps                                                            |
+| get_widget_collide_point(widget: UiWidget, pos: tuple[int, int]) -> tuple[int, int] | Check if given pos is inside the widget. Return relative position inside the widget. In case of pointed top or left borders the value is negative                                                |
+| get_child_by_pos(pos: tuple[int, int]) -> (UiWidget, tuple[int, int])               | Check all visible childs for position. Search is in reverse order, to get the widget from top of the widget stack if widgets overlaps                                                            |
 | process_event_focus(event)                                                | If pointless event (eg button press) appears, this method is called. THe method pass the event up to focus childs                                                                                |
-| process_event_pos(event, pos: (int, int))                                 | If pointed event (eg mouse or touch) appears, this method is called. The method search for pointed child and pass the event to the child                                                         |
+| process_event_pos(event, pos: tuple[int, int])                                 | If pointed event (eg mouse or touch) appears, this method is called. The method search for pointed child and pass the event to the child                                                         |
 | process_tick()                                                            | Is called each game step for own logic recursively.Can ber redefined to add own game step logic. The super().process_tick() needs to be called to trigger the children widgets logic             | 
 
 ## UiWidgetStatic
@@ -133,7 +133,7 @@ At this point only the UiApp specific attributes and methods are mentioned.
 | Attribute       | Type          | Reason                                                                               | Value is set          |
 |-----------------|---------------|--------------------------------------------------------------------------------------|-----------------------|
 | controls        | Controls()    | The run() method calls the methods of this object in right order                     | Constructor parameter | 
-| size_w / size_h | float / float | Used in init_display_settings() to set the desired window size. 0 means maximum size | Constructor parameter |
+| size_w / size_h | int / int     | Used in init_display_settings() to set the desired window size. 0 means maximum size | Constructor parameter |
 | fullscreen      | bool          | Used in init_display_settings to set fullscreen                                      | Constructor parameter |
 | noframe         | bool          | Used in init_display_settings to set noframe (borderless window)                     | Constructor parameter |
 | exit_loop       | bool          | If set to true, the run() Method ends                                                |
@@ -199,8 +199,8 @@ area content. The Port can be assigned to UiWidgetViewportContainer using set_vi
 
 | Attribute                        | Type          | Reason                                                                                                             | Value is set        |
 |----------------------------------|---------------|--------------------------------------------------------------------------------------------------------------------|---------------------|
-| shift_x / shift_y                | float / float | Scrolling position. Initial is 0 / 0 that means the left / top corner is shown                                     | external assignment |
-| viewport_width / viewport_height | float / float | Viewport size. Note, if viewport is smaller then parent widget, the viewport grows automatically to fill he parent | set_size()          |
+| shift_x / shift_y                | int / int | Scrolling position. Initial is 0 / 0 that means the left / top corner is shown                                     | external assignment |
+| viewport_width / viewport_height | int / int    | Viewport size. Note, if viewport is smaller then parent widget, the viewport grows automatically to fill he parent | set_size()          |
 
 ### Methods
 
@@ -210,7 +210,7 @@ area content. The Port can be assigned to UiWidgetViewportContainer using set_vi
 | get_surface(with_borders: bool = False) -> pygame.Surface | Get the viewport surface including invisible area parts                                       |
 | adjust_shift()                                            | Check if remaining area is fully visible after shift. scroll back if right/bottom is reached  |  
 | draw()                                                    | draw childs and blit the visible area into parent surface                                     |
-| process_event_pos(event, pos: (int, int) = None)          | Handle touch drag for scrolling                                                               |
+| process_event_pos(event, pos: tuple[int, int] = None)          | Handle touch drag for scrolling                                                               |
 
 ## UiWidgetsScrollbar
 
@@ -221,11 +221,11 @@ Scrollbar is implemented for usage in UiWidgetViewportContainer
 | Attribute               | Type         | Reason                                                                                      | Value is set                          |
 |-------------------------|--------------|---------------------------------------------------------------------------------------------|---------------------------------------|
 | scrollbar_is_horizontal | bool         | Is horizontal (=True) or vertical (=False) scrollbar                                        | Constructor parameter                 |
-| scrollbar_width         | float        | The bar width                                                                               | Constructor parameter, default 20     |
+| scrollbar_width         | int        | The bar width                                                                               | Constructor parameter, default 20     |
 | scrollbar_color         | pygame.Color | The bar color                                                                               | Constructor parameter, default is red |
-| current_value           | float        | Current scrolling value. Between 0 and (max_value - bar_value).                             | external assignment                   |
-| bar_value               | float        | The scrollbar size. For UiWidgetViewport the value is proportionally to smaller parent size | external assignment                   |
-| max_value               | float        | The maximum value. For UiWidgetViewport the value is proportionally to viewport size        | external assignment                   |
+| current_value           | int        | Current scrolling value. Between 0 and (max_value - bar_value).                             | external assignment                   |
+| bar_value               | int        | The scrollbar size. For UiWidgetViewport the value is proportionally to smaller parent size | external assignment                   |
+| max_value               | int        | The maximum value. For UiWidgetViewport the value is proportionally to viewport size        | external assignment                   |
 
 ### Methods
 
@@ -234,7 +234,7 @@ Scrollbar is implemented for usage in UiWidgetViewportContainer
 | adjust_scrollbar_by_viewport()            | Adjust scrollbar attributes from parent_widget.viewport_widget size and shift values | 
 | draw()                                    | if viewport_widget was updated, call adjust_scrollbar_by_viewport() before draw      |
 | compose(surface: pygame.Surface) -> bool  | Compose the bar into surface                                                         |
-| process_event_pos(event, pos: (int, int)) | Handle scroll actions if the scrollbar is drawn using mouse or touchscreen           |
+| process_event_pos(event, pos: tuple[int, int]) | Handle scroll actions if the scrollbar is drawn using mouse or touchscreen           |
 
 # Advanced
 
@@ -272,7 +272,7 @@ Only for position. The value will be ignored and position calculated based on wi
 
 | Attribute                              | Type          | Reason                                                                                          | Value is set |
 |----------------------------------------|---------------|-------------------------------------------------------------------------------------------------|--------------|
-| parent_w / parent_h                    | float / float | Parent widget size. The DynamicRect track if the child is inside parent                         |              |
+| parent_w / parent_h                    | int / int | Parent widget size. The DynamicRect track if the child is inside parent                         |              |
 | pos_x_type / pos_y_type                | Dynamic Type  | Type of pos_x / pos_y values. See dynamic types                                                 |              |
 | pos_x / pos_y                          | Size value    | The position value according dynamic type                                                       |              |
 | size_x_type / size_y_type              | Dynamic Type  | Type of pos_x / pos_y values. See dynamic types                                                 |              |
@@ -284,11 +284,11 @@ Only for position. The value will be ignored and position calculated based on wi
 
 | Method                                                                                                                                             | Reason                                                                                      |
 |----------------------------------------------------------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------|
-| set_parent_size(parent_w: float = None, parent_h: float = None)                                                                                    | Set parent size from values                                                                 |
+| set_parent_size(parent_w: int = None, parent_h: int = None)                                                                                    | Set parent size from values                                                                 |
 | set_parent_size_by_surface(parent_surface: Surface)                                                                                                | Set parent size from parent surface                                                         |
-| set_pos(pos_x_type, pos_x: float = None, pos_y_type, pos_y: float = None)                                                                          | Change position                                                                             |
+| set_pos(pos_x_type, pos_x: int = None, pos_y_type, pos_y: int = None)                                                                          | Change position                                                                             |
 | set_size(size_w_type=None, size_w=None, size_h_type=None, size_h=None)                                                                             | Change size                                                                                 |
-| set_border(border_all: float = None, border_top: float = None, border_bottom: float = None, border_left: float = None, border_right: float = None) | Set borders. "border_all" change all not specified borders                                  |
-| get_size(with_borders: bool = False) -> (int, int)                                                                                                 | Get current size, with or without borders                                                   |
+| set_border(border_all: int = None, border_top: int = None, border_bottom: int = None, border_left: int = None, border_right: int = None) | Set borders. "border_all" change all not specified borders                                  |
+| get_size(with_borders: bool = False) -> tuple[int, int]                                                                                                 | Get current size, with or without borders                                                   |
 | get_rect(with_borders: bool = False) -> pygame.Rect                                                                                                | Get current size and position as pygame.Rect This method contain the main DynamicRect magic |
 

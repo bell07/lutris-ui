@@ -1,23 +1,38 @@
-from pygame import Color, font, Surface
+from __future__ import annotations
 
-from uiwidgets import UiWidgetStatic, UiWidget
+from typing import TYPE_CHECKING
+
+from pygame import Color, Surface, font
+
+from .uiwidgetstatic import UiWidgetStatic
+
+if TYPE_CHECKING:
+    from .uiwidget import UiWidget
 
 
 class UiWidgetTextBlock(UiWidgetStatic):
-    def __init__(self, parent: UiWidget, text: str = None, text_color: Color = None,
-                 text_font: font.Font = None,
-                 text_centered_x: bool = False, text_centered_y: bool = False,
-                 **kwargs):
+    def __init__(
+        self,
+        parent: UiWidget,
+        text: str = "",
+        text_color: Color | None = None,
+        text_font: font.Font | None = None,
+        text_centered_x: bool = False,
+        text_centered_y: bool = False,
+        **kwargs,
+    ):
         super().__init__(parent, **kwargs)
-        self.text = text or ""
-        self.text_color = text_color or Color('black')
-        self.text_font = text_font or font.SysFont(None, 30)
-        self.text_centered_x = text_centered_x
-        self.text_centered_y = text_centered_y
+        self.text: str = text
+        self.text_color: Color = text_color or Color("black")
+        self.text_font: font.Font = text_font or font.SysFont(None, 30)
+        self.text_centered_x: bool = text_centered_x
+        self.text_centered_y: bool = text_centered_y
 
     def compose(self, surface: Surface) -> None:
-        words = [word.split(' ') for word in self.text.splitlines()]  # 2D array where each row is a list of words.
-        space = self.text_font.size(' ')[0]  # The width of a space.
+        words = [
+            word.split(" ") for word in self.text.splitlines()
+        ]  # 2D array where each row is a list of words.
+        space = self.text_font.size(" ")[0]  # The width of a space.
         (surface_max_width, surface_max_height) = surface.get_size()
         text_map = []
         x, y = 0, 0

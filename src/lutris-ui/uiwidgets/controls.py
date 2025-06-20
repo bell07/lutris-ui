@@ -1,86 +1,113 @@
-import time
+from __future__ import annotations
 
-import pygame
+from time import time
 
+from pygame import constants, event, joystick
+from pygame.time import Clock
 from settings import Settings
 
 
 # UI Controls proxy
 class Controls:
-    COMMAND_EVENT = pygame.event.custom_type()
+    COMMAND_EVENT = event.custom_type()
 
-    def __init__(self, repeatable_commands: tuple = None, keyboard_commands: dict[int: str] = None,
-                 joypad_keys_commands: dict[int: str] = None,
-                 allowed_event_types: tuple = None):
-        self.repeatable_commands = repeatable_commands or {}
-        self.keyboard_commands = keyboard_commands or []
-        self.joypad_keys_commands = joypad_keys_commands or []
-        self.events = []
+    def __init__(
+        self,
+        repeatable_commands: list[str] | None = None,
+        keyboard_commands: dict[int, str] | None = None,
+        joypad_keys_commands: dict[int, str] | None = None,
+        allowed_event_types: list[int] | None = None,
+    ):
+        self.repeatable_commands: list[str] = repeatable_commands or []
+        self.keyboard_commands: dict[int, str] = keyboard_commands or {}
+        self.joypad_keys_commands: dict[int, str] = joypad_keys_commands or {}
+        self.events: list[event.Event] = []
         settings = Settings("input")
-        self.repeat_time_1 = settings.get("repeat_time_1", 500)  # ms
-        self.repeat_time_2 = settings.get("repeat_time_2", 200)  # ms
+        self.repeat_time_1: float = settings.get("repeat_time_1", 500)  # ms
+        self.repeat_time_2: float = settings.get("repeat_time_2", 200)  # ms
 
-        self._clock = pygame.time.Clock()
-        self._timer1 = 0  # Timer 1 since key is pressed
-        self._timer2 = None  # Timer 2 since key was processed last time
-        self._pressed_command = None
-        self._pressed_event = None
+        self._clock = Clock()
+        self._timer1: float = 0  # Timer 1 since key is pressed
+        self._timer2: float | None = None  # Timer 2 since key was processed last time
+        self._pressed_command: str | None = None
+        self._pressed_event: event.Event | None = None
         self._last_axis = None
-        self.allowed_event_types = allowed_event_types
+        self.allowed_event_types: list[int] | None = allowed_event_types
 
-        if allowed_event_types is not None:
-            self.allowed_event_types += (pygame.JOYBUTTONDOWN, pygame.JOYBUTTONUP,
-                                         pygame.JOYAXISMOTION, pygame.JOYHATMOTION,
-                                         Controls.COMMAND_EVENT,
-                                         pygame.KEYDOWN, pygame.KEYUP,
-                                         pygame.JOYDEVICEADDED, pygame.JOYDEVICEREMOVED)
+        if self.allowed_event_types:
+            self.allowed_event_types += [
+                constants.JOYBUTTONDOWN,
+                constants.JOYBUTTONUP,
+                constants.JOYAXISMOTION,
+                constants.JOYHATMOTION,
+                Controls.COMMAND_EVENT,
+                constants.KEYDOWN,
+                constants.KEYUP,
+                constants.JOYDEVICEADDED,
+                constants.JOYDEVICEREMOVED,
+            ]
         self.init_all_js()
 
     @staticmethod
     def init_all_js() -> None:
-        pygame.joystick.init()
-        for i in range(pygame.joystick.get_count()):
-            pygame.joystick.Joystick(i).init()
+        joystick.init()
+        for i in range(joystick.get_count()):
+            joystick.Joystick(i).init()
 
     @staticmethod
-    def _is_same(event1: pygame.event.Event, event2: pygame.event.Event) -> bool:
+    def _is_same(event1: event.Event, event2: event.Event) -> bool:
         if event1.type != event2.type:  # Different types
-            if (event1.type == pygame.KEYDOWN and event2.type == pygame.KEYUP) or (
-                    event2.type == pygame.KEYDOWN and event1.type == pygame.KEYUP):
+            if (
+                event1.type == constants.KEYDOWN and event2.type == constants.KEYUP
+            ) or (event2.type == constants.KEYDOWN and event1.type == constants.KEYUP):
                 return True
 
-            if (event1.type == pygame.JOYBUTTONDOWN and event2.type == pygame.JOYBUTTONUP) or (
-                    event2.type == pygame.JOYBUTTONDOWN and event1.type == pygame.JOYBUTTONUP):
+            if (
+                event1.type == constants.JOYBUTTONDOWN
+                and event2.type == constants.JOYBUTTONUP
+            ) or (
+                event2.type == constants.JOYBUTTONDOWN
+                and event1.type == constants.JOYBUTTONUP
+            ):
                 return True
 
             return False
-        if event1.type == pygame.JOYAXISMOTION and event1.axis != event2.axis:  # Different axis
+        if (
+            event1.type == constants.JOYAXISMOTION and event1.axis != event2.axis
+        ):  # Different axis
             return False
 
         return True
 
-    def _press(self, command: str, event: pygame.event.Event) -> bool:
-        if self._pressed_command == command and self._is_same(self._pressed_event, event):
+    def _press(self, command: str, event: event.Event) -> bool:
+        if (
+            self._pressed_command == command
+            and self._pressed_event
+            and self._is_same(self._pressed_event, event)
+        ):
             return False
         else:
             self._pressed_command = command
             self._pressed_event = event
-            self._timer1 = time.time()
+            self._timer1 = time()
             self._timer2 = None
             return True  # Pressed first time
 
-    def _release(self, release_event: pygame.event.Event = None) -> None:
-        if self._pressed_event is None or release_event is None \
-                or self._is_same(release_event, self._pressed_event):
+    def _release(self, release_event: event.Event | None = None) -> None:
+        if (
+            self._pressed_event is None
+            or release_event is None
+            or self._is_same(release_event, self._pressed_event)
+        ):
             self._pressed_command = None
             self._pressed_event = None
 
-    def _get_repeated_key(self) -> pygame.event.Event | None:
+    def _get_repeated_key(self) -> event.Event | None:
         # Nothing pressed
         if self._pressed_command is None:
             return None
 
-        now = time.time()
+        now = time()
 
         # Repeat time 1 not reached
         if (now - self._timer1) * 1000 < self.repeat_time_1 and self._timer2 is None:
@@ -89,22 +116,26 @@ class Controls:
         # Check for timer 2
         if self._timer2 is None:
             self._timer2 = now
-            return pygame.event.Event(Controls.COMMAND_EVENT,
-                                      {"command": self._pressed_command, "origin": self._pressed_event})
+            return event.Event(
+                Controls.COMMAND_EVENT,
+                {"command": self._pressed_command, "origin": self._pressed_event},
+            )
 
             # Repeat time 2 not reached
         if (now - self._timer2) * 1000 < self.repeat_time_2:
             return None
 
         self._timer2 = now
-        return pygame.event.Event(Controls.COMMAND_EVENT,
-                                  {"command": self._pressed_command, "origin": self._pressed_event})
+        return event.Event(
+            Controls.COMMAND_EVENT,
+            {"command": self._pressed_command, "origin": self._pressed_event},
+        )
 
     @staticmethod
-    def _dir_to_code(vector: (float, float)) -> (str, int):
-        x, y = vector
+    def _dir_to_code(x: float, y: float) -> tuple[str | None, float]:
         press = 0.1
-        command, value = None, 0
+        command: str | None = None
+        value: float = 0
 
         if x <= -press:
             command, value = "LEFT", -x
@@ -123,52 +154,65 @@ class Controls:
 
         return None, 0  # Ignore, repeat allowed
 
-    def _append_custom_event(self, command: str, event: pygame.event.Event, events: list):
+    def _append_custom_event(
+        self, command: str, custom_event: event.Event, events: list
+    ):
         if any(e.type == Controls.COMMAND_EVENT for e in events):
             return  # Only 1 command in game step
-        events.append(pygame.event.Event(Controls.COMMAND_EVENT, {"command": command, "origin": event}))
+        events.append(
+            event.Event(
+                Controls.COMMAND_EVENT, {"command": command, "origin": custom_event}
+            )
+        )
         if command in self.repeatable_commands:
-            self._press(command, event)
+            self._press(command, custom_event)
 
-    def _apply_custom_events(self, events: list) -> None:
+    def _apply_custom_events(self, events: list[event.Event]) -> None:
         axis = self._last_axis
         axis_command = None
         axis_command_value = 0
-        axis_command_event = None
+        axis_command_event: event.Event | None = None
         axis_released = False
 
         for e in events:
             match e.type:
-                case pygame.KEYDOWN:
+                case constants.KEYDOWN:
                     code = self.keyboard_commands.get(e.key)
                     if code is not None and (
-                            e.mod & ~(pygame.KMOD_CAPS | pygame.KMOD_NUM | pygame.KMOD_MODE) == pygame.KMOD_NONE):
+                        e.mod
+                        & ~(
+                            constants.KMOD_CAPS
+                            | constants.KMOD_NUM
+                            | constants.KMOD_MODE
+                        )
+                        == constants.KMOD_NONE
+                    ):
                         self._append_custom_event(code, e, events)
 
-                case pygame.KEYUP:
+                case constants.KEYUP:
                     self._release(e)
 
-                case pygame.JOYBUTTONDOWN:
+                case constants.JOYBUTTONDOWN:
                     code = self.joypad_keys_commands.get(e.button)
                     if code is not None:
                         self._append_custom_event(code, e, events)
-                case pygame.JOYBUTTONUP:
+                case constants.JOYBUTTONUP:
                     self._release(e)
 
-                case pygame.JOYHATMOTION:
-                    code, value = self._dir_to_code(e.value)
+                case constants.JOYHATMOTION:
+                    code, value = self._dir_to_code(e.value[0], e.value[1])
                     if code is not None and value == 1:
                         self._append_custom_event(code, e, events)
                     else:
                         self._release(e)
 
-                case pygame.JOYAXISMOTION:
+                case constants.JOYAXISMOTION:
                     code = None
                     value = 0
-                    if e.axis == pygame.CONTROLLER_AXIS_LEFTX:
-                        code, value = self._dir_to_code([e.value, 0])
-                    elif e.axis == pygame.CONTROLLER_AXIS_LEFTY:
-                        code, value = self._dir_to_code([0, -e.value])
+                    if e.axis == constants.CONTROLLER_AXIS_LEFTX:
+                        code, value = self._dir_to_code(e.value, 0)
+                    elif e.axis == constants.CONTROLLER_AXIS_LEFTY:
+                        code, value = self._dir_to_code(0, -e.value)
                     if code is not None:
                         if code == "RELEASE" and (axis is None or e.axis == axis):
                             axis_released = True
@@ -182,32 +226,34 @@ class Controls:
         if axis_released is True:
             self._release()
             self._last_axis = None
-        elif axis_command is not None and self._last_axis != axis:
+        elif (
+            axis_command and axis_command_event is not None and self._last_axis != axis
+        ):
             self._last_axis = axis
             self._append_custom_event(axis_command, axis_command_event, events)
 
     def update_controls(self) -> None:
         self.events.clear()
         if self._pressed_command is None:
-            wait_event = pygame.event.wait(timeout=5000)
-            if wait_event.type != pygame.NOEVENT:
+            wait_event = event.wait(timeout=5000)
+            if wait_event.type != constants.NOEVENT:
                 self.events.append(wait_event)
-        self.events += pygame.event.get()
+        self.events += event.get()
 
         # Basic processing. Track release key
         if self.events:
             for e in self.events:
                 match e.type:
-                    case pygame.JOYDEVICEADDED:
-                        js = pygame.joystick.Joystick(e.device_index)
+                    case constants.JOYDEVICEADDED:
+                        js = joystick.Joystick(e.device_index)
                         self.init_all_js()
                         print(f"Joystick added: {str(js.get_name())}")
-                    case pygame.JOYDEVICEREMOVED:
+                    case constants.JOYDEVICEREMOVED:
                         print(f"Joystick removed: {e.instance_id}")
                         self.init_all_js()
-                    case pygame.KEYUP:
+                    case constants.KEYUP:
                         self._release(e)
-                    case pygame.JOYBUTTONUP:  # instance_id, button
+                    case constants.JOYBUTTONUP:  # instance_id, button
                         self._release(e)
 
             # Map to custom events

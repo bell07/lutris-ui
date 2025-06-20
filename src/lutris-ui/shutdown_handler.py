@@ -1,21 +1,24 @@
-import os
-import subprocess
+from __future__ import annotations
 from datetime import datetime
+from os import getuid
+from subprocess import run
 
 import psutil
 
 
 class BaseModule:
+    __zero_datetime = datetime(2000, 1, 1)
+
     def __init__(self):
-        self.pid = None
-        self.shutdown_sent_time = None
+        self.pid: int | None = None
+        self.shutdown_sent_time = self.__zero_datetime
 
     def check_is_running(self) -> bool:
         # Check the launched command is still running
         if self.pid is not None:
             try:
                 process = psutil.Process(self.pid)
-                if process.status() == 'zombie':
+                if process.status() == "zombie":
                     try:
                         process.wait(timeout=1)
                         return False
@@ -25,8 +28,9 @@ class BaseModule:
                     return True
             except psutil.NoSuchProcess:
                 self.pid = None
-                self.shutdown_sent_time = None
+                self.shutdown_sent_time = self.__zero_datetime
                 return False
+        return False
 
     def shutdown(self, root_pid: int) -> bool:
         return False
@@ -43,8 +47,11 @@ class LaunchModule(BaseModule):
         if is_running is True:
             return True
 
-        if (datetime.now() - self.launch_time).total_seconds() < 5:  # Wait at least 5 seconds before giving up
+        if (
+            datetime.now() - self.launch_time
+        ).total_seconds() < 5:  # Wait at least 5 seconds before giving up
             return True
+        return False
 
 
 class LutrisModule(BaseModule):
@@ -53,7 +60,7 @@ class LutrisModule(BaseModule):
             # Search for pid in running processes
             for process in psutil.process_iter():
                 try:
-                    if process.uids().real != os.getuid():
+                    if process.uids().real != getuid():
                         continue
                 except psutil.ZombieProcess:
                     continue
@@ -72,9 +79,8 @@ class AnyModule(BaseModule):
         try:
             root_process = psutil.Process(root_pid)
             if root_process.is_running():
-                if self.shutdown_sent_time is not None:
-                    if (datetime.now() - self.shutdown_sent_time).total_seconds() < 10:
-                        return True  # Wait at least 2 Seconds for app shutdown
+                if (datetime.now() - self.shutdown_sent_time).total_seconds() < 10:
+                    return True  # Wait at least 2 Seconds for app shutdown
                 done = False
                 for child in root_process.children():
                     print(f"Game shutdown ANY: send kill to {child.pid}")
@@ -85,6 +91,7 @@ class AnyModule(BaseModule):
 
         except psutil.NoSuchProcess:
             return True
+        return False
 
 
 class SteamModule(BaseModule):
@@ -97,12 +104,13 @@ class SteamModule(BaseModule):
                 for child in root_process.children():
                     try:
                         # Assumption: Command line is 'bash', '*/steam.sh', 'steam://rungameid/*'
-                        if child.cmdline()[2].startswith('steam://rungameid'):
-                            if self.shutdown_sent_time is not None:
-                                if (datetime.now() - self.shutdown_sent_time).total_seconds() < 10:
-                                    return True  # Wait at least 10 Seconds for Steam client shutdown
+                        if child.cmdline()[2].startswith("steam://rungameid"):
+                            if (
+                                datetime.now() - self.shutdown_sent_time
+                            ).total_seconds() < 10:
+                                return True  # Wait at least 10 Seconds for Steam client shutdown
                             print(f"Game shutdown Steam: call steam -shutdown")
-                            subprocess.run(['steam', '-shutdown'])
+                            run(["steam", "-shutdown"])
                             self.shutdown_sent_time = datetime.now()
                             return True
                     except IndexError:
