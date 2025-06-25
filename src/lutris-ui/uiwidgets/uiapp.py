@@ -123,6 +123,7 @@ class UiApp(UiWidget):
         return
 
     def run(self):
+        self.controls.init()
         while True:
             self.controls.update_controls()
             self.process_tick()

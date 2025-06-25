@@ -29,6 +29,7 @@ Basically the class is used in UiApp.run() method internally
 
 | Method                          | Reason                                                                                                                       |
 |---------------------------------|------------------------------------------------------------------------------------------------------------------------------|
+| init() -> None               | Overall module update. Iniialize joysticks | 
 | init_all_js() -> None           | The method is called automatically if any joypad is connected or removed. Does re-initialization of all connected joysticks. |
 | update_controls() -> None       | Read pygame.event and enhance them by commands and repeats. Provides the Controls().events Attribute                         | 
 | game_tick() -> None             | Use the same pygame.Clock() for application step delay. Hardcoded to tick(30)                                                |

@@ -46,7 +46,6 @@ class Controls:
                 constants.JOYDEVICEADDED,
                 constants.JOYDEVICEREMOVED,
             ]
-        self.init_all_js()
 
     @staticmethod
     def init_all_js() -> None:
@@ -231,6 +230,9 @@ class Controls:
         ):
             self._last_axis = axis
             self._append_custom_event(axis_command, axis_command_event, events)
+
+    def init(self) -> None:
+        self.init_all_js()
 
     def update_controls(self) -> None:
         self.events.clear()
