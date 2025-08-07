@@ -158,6 +158,9 @@ class UiGameViewport(UiWidgetViewport):
                 / self.max_games_cols
             )
 
+        if list_updated is True:
+            self.set_changed()  # Force redraw if list is empty now
+
         if not self.game_widgets:
             for idx, game_data in enumerate(games_data):
                 pos_x, pos_y = self.get_game_position(idx + 1, optimized_distance_width)
