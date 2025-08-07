@@ -220,7 +220,7 @@ class UiWidgetViewport(UiWidget):
             self.set_changed()
 
         super().draw()
-        if self.updated:
+        if self.updated or self.is_changed():
             parent_surface = self.get_parent_surface()
             parent_width, parent_height = self.get_parent_size()
             assert self._viewport_surface
@@ -229,6 +229,7 @@ class UiWidgetViewport(UiWidget):
             )
             parent_surface.blit(widget_surface, (0, 0))
             self.unset_changed()
+            self.updated = True
 
     def get_widget_collide_point(
         self, widget: UiWidget, pos: tuple[int, int]
