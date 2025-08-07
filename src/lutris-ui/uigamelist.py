@@ -193,29 +193,42 @@ class UiGameViewport(UiWidgetViewport):
         if self.focus_child:
             selected_game_index = self.game_widgets.index(self.focus_child)
 
+        last_game_index = len(self.game_widgets) - 1
+        if last_game_index < 0:
+            return False
+
         match command:
             case "TOP":
                 selected_game_index = 0
-            case "UP":
-                selected_game_index -= self.max_games_cols
-            case "DOWN":
-                selected_game_index += self.max_games_cols
             case "BOTTOM":
-                selected_game_index = len(self.game_widgets) - 1
+                selected_game_index = last_game_index
+            case "UP":
+                if selected_game_index == 0:
+                    selected_game_index = last_game_index
+                else:
+                    selected_game_index -= self.max_games_cols
+            case "DOWN":
+                if selected_game_index == last_game_index:
+                    selected_game_index = 0
+                else:
+                    selected_game_index += self.max_games_cols
             case "LEFT":
-                selected_game_index -= 1
+                if selected_game_index == 0:
+                    selected_game_index = last_game_index
+                else:
+                    selected_game_index -= 1
             case "RIGHT":
-                selected_game_index += 1
-            case "RELOAD":
-                self.ldb.data_changed = True
-                self.set_changed()
+                if selected_game_index == last_game_index:
+                    selected_game_index = 0
+                else:
+                    selected_game_index += 1
             case _:
-                return False
+                raise ValueError(f"Unknown navigation command {command}")
 
         if selected_game_index < 0:
             selected_game_index = 0
-        if len(self.game_widgets) <= selected_game_index:
-            selected_game_index = len(self.game_widgets) - 1
+        elif selected_game_index > last_game_index:
+            selected_game_index = last_game_index
 
         # Select new
         selected_widget = self.game_widgets[selected_game_index]
@@ -235,8 +248,14 @@ class UiGameViewport(UiWidgetViewport):
     def process_event_focus(self, event: event.Event) -> bool:
         match event.type:
             case Controls.COMMAND_EVENT:
-                if self.select_game(event.command) is True:
-                    return True
+                match event.command:
+                    case "RELOAD":
+                        self.ldb.data_changed = True
+                        self.set_changed()
+                        return True
+                    case _:
+                        if self.select_game(event.command) is True:
+                            return True
             case constants.MOUSEWHEEL:
                 self.shift_y = self.shift_y - (event.y * GAME_WIDGET_HEIGHT / 4)
                 self.set_changed()
