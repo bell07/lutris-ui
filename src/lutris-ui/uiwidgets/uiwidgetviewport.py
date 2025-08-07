@@ -266,3 +266,5 @@ class UiWidgetViewportContainer(UiWidget):
         assert self.widgets
         self.widgets.remove(widget)
         self.widgets.insert(0, widget)
+        self.vertical_scrollbar_widget.adjust_scrollbar_by_viewport()
+        self.horizontal_scrollbar_widget.adjust_scrollbar_by_viewport()
