@@ -128,7 +128,7 @@ class UiGameViewport(UiWidgetViewport):
         return pos_x, pos_y
 
     def update_games_list(self) -> None:
-        (visible_width, visible_height) = self.get_parent_size()
+        (visible_width, _) = self.get_parent_size()
 
         if self._old_width != visible_width:
             self._old_width = visible_width
@@ -142,13 +142,15 @@ class UiGameViewport(UiWidgetViewport):
             update_widgets = False
 
         games_data, list_updated = self.ldb.get_games()
-        viewport_height = (int((len(games_data) - 1) / self.max_games_cols) + 1) * (
+        games_count = len(games_data)
+
+        viewport_height = (int((games_count - 1) / self.max_games_cols) + 1) * (
             GAME_WIDGET_HEIGHT + GAME_DISTANCE_HEIGHT
         )
 
         self.set_size(size_w=GAME_WIDGET_WIDTH, size_h=viewport_height)
 
-        if self.max_games_cols >= len(games_data):
+        if self.max_games_cols >= games_count:
             optimized_distance_width = GAME_DISTANCE_WIDTH
         else:
             optimized_distance_width = round(
@@ -182,8 +184,8 @@ class UiGameViewport(UiWidgetViewport):
                     self.game_widgets.insert(
                         idx, UiGameWidget(self, game_data, pos_x=pos_x, pos_y=pos_y)
                     )
-            if len(games_data) < len(self.game_widgets):
-                for old_idx in range(len(games_data), len(self.game_widgets)):
+            if games_count < len(self.game_widgets):
+                for old_idx in range(games_count, len(self.game_widgets)):
                     widget = self.game_widgets[old_idx]
                     self.remove_child(widget)
                     self.game_widgets.pop(old_idx)
