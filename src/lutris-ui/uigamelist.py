@@ -258,7 +258,7 @@ class UiGameViewport(UiWidgetViewport):
                         self.ldb.data_changed = True
                         self.set_changed()
                         return True
-                    case _:
+                    case "TOP" | "BOTTOM" | "LEFT" | "RIGHT" | "UP" | "DOWN":
                         if self.select_game(event.command) is True:
                             return True
             case constants.MOUSEWHEEL:
